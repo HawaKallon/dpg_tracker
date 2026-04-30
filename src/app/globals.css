@@ -1,26 +1,43 @@
 @import "tailwindcss";
 
+/* UNICEF palette: Cyan blue #1CABE2 (primary), white, deep navy #002759 for emphasis. */
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #00264d;
+  --muted: #f1f7fb;
+  --muted-foreground: #4b6982;
+  --border: #d8e6f1;
+  --card: #ffffff;
+  --primary: #1CABE2;
+  --primary-foreground: #ffffff;
+  --primary-deep: #0073b8;
+  --accent: #002759;
+  --accent-foreground: #ffffff;
+  --destructive: #c2410c;
+  --success: #047857;
+  --pink: #ec4899;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-card: var(--card);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-deep: var(--primary-deep);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-pink: var(--pink);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
 }
