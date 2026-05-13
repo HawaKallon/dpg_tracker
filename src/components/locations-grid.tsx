@@ -1,4 +1,5 @@
-import { GraduationCap, MapPin, Users } from 'lucide-react';
+import Link from 'next/link';
+import { ArrowUpRight, GraduationCap, MapPin, Users } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import type { LocationBreakdown } from '@/lib/supabase/queries';
 
@@ -40,53 +41,63 @@ export function LocationsGrid({ data }: { data: LocationBreakdown[] }) {
             : 0;
 
         return (
-          <Card key={loc.id} className="overflow-hidden">
-            <CardContent className="p-5 space-y-3">
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex items-start gap-2 min-w-0">
-                  <div className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary-deep">
-                    <Icon className="size-4" />
+          <Link
+            key={loc.id}
+            href={`/locations/${loc.slug}`}
+            className="group block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-xl"
+            aria-label={`View ${loc.name} details`}
+          >
+            <Card className="overflow-hidden transition-shadow group-hover:shadow-md">
+              <CardContent className="p-5 space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-start gap-2 min-w-0">
+                    <div className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary-deep">
+                      <Icon className="size-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="text-sm font-semibold leading-tight text-accent truncate group-hover:underline">
+                        {loc.name}
+                      </h3>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {TYPE_LABEL[loc.type as keyof typeof TYPE_LABEL] ?? 'Venue'} ·{' '}
+                        {loc.activity_count} {loc.activity_count === 1 ? 'event' : 'events'}
+                      </p>
+                    </div>
                   </div>
-                  <div className="min-w-0">
-                    <h3 className="text-sm font-semibold leading-tight text-accent truncate">
-                      {loc.name}
-                    </h3>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {TYPE_LABEL[loc.type as keyof typeof TYPE_LABEL] ?? 'Venue'} ·{' '}
-                      {loc.activity_count} {loc.activity_count === 1 ? 'event' : 'events'}
-                    </p>
+                  <div className="text-right shrink-0 flex flex-col items-end">
+                    <div className="text-2xl font-semibold tabular-nums leading-none text-accent">
+                      {loc.total_participants.toLocaleString()}
+                    </div>
+                    <div className="text-[10px] uppercase tracking-wide text-muted-foreground mt-1">
+                      participants
+                    </div>
                   </div>
                 </div>
-                <div className="text-right shrink-0">
-                  <div className="text-2xl font-semibold tabular-nums leading-none text-accent">
-                    {loc.total_participants.toLocaleString()}
-                  </div>
-                  <div className="text-[10px] uppercase tracking-wide text-muted-foreground mt-1">
-                    participants
-                  </div>
-                </div>
-              </div>
 
-              <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
-                <div
-                  className="h-full bg-primary transition-all"
-                  style={{ width: `${pct}%` }}
-                />
-              </div>
+                <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                  <div
+                    className="h-full bg-primary transition-all"
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
 
-              <div className="flex items-center justify-between text-xs">
-                <div className="flex gap-3">
-                  <span className="text-muted-foreground">
-                    M <span className="font-medium text-accent tabular-nums">{loc.male}</span>
-                  </span>
-                  <span className="text-muted-foreground">
-                    F <span className="font-medium text-pink tabular-nums">{loc.female}</span>
+                <div className="flex items-center justify-between text-xs">
+                  <div className="flex gap-3">
+                    <span className="text-muted-foreground">
+                      M <span className="font-medium text-accent tabular-nums">{loc.male}</span>
+                    </span>
+                    <span className="text-muted-foreground">
+                      F <span className="font-medium text-pink tabular-nums">{loc.female}</span>
+                    </span>
+                  </div>
+                  <span className="inline-flex items-center gap-1 text-muted-foreground group-hover:text-primary-deep">
+                    {femalePct}% female
+                    <ArrowUpRight className="size-3 opacity-0 transition-opacity group-hover:opacity-100" />
                   </span>
                 </div>
-                <span className="text-muted-foreground">{femalePct}% female</span>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </Link>
         );
       })}
     </div>

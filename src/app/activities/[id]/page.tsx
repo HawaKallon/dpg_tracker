@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import Image from 'next/image';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import {
@@ -12,6 +13,7 @@ import {
 import { SiteHeader } from '@/components/site-header';
 import { Badge } from '@/components/ui/badge';
 import { KpiCard } from '@/components/kpi-card';
+import { RichText } from '@/components/editor/rich-text';
 import { getActivityById } from '@/lib/supabase/queries';
 
 export const revalidate = 60;
@@ -101,7 +103,18 @@ export default async function ActivityDetailPage({ params }: { params: Params })
             <div className="inline-flex items-center gap-1.5">
               <MapPin className="size-4" aria-hidden="true" />
               <dt className="sr-only">Location</dt>
-              <dd>{activity.location?.name ?? 'Location not set'}</dd>
+              <dd>
+                {activity.location ? (
+                  <Link
+                    href={`/locations/${activity.location.slug}`}
+                    className="hover:underline text-foreground"
+                  >
+                    {activity.location.name}
+                  </Link>
+                ) : (
+                  'Location not set'
+                )}
+              </dd>
             </div>
             {activity.data_source && (
               <div className="inline-flex items-center gap-1.5">
@@ -140,6 +153,60 @@ export default async function ActivityDetailPage({ params }: { params: Params })
             Reach multiplier: <strong className="text-accent">{(reach / total).toFixed(1)}×</strong>{' '}
             beyond in-person participants.
           </p>
+        )}
+
+        {activity.highlights && (
+          <blockquote className="border-l-4 border-primary bg-primary/5 px-5 py-4 text-lg italic text-accent">
+            “{activity.highlights}”
+          </blockquote>
+        )}
+
+        {activity.outcomes && (
+          <section aria-label="Outcomes" className="space-y-3">
+            <h2 className="text-lg font-semibold text-accent">Outcomes</h2>
+            <div className="rounded-xl border border-border bg-card p-6">
+              <RichText json={activity.outcomes} />
+            </div>
+          </section>
+        )}
+
+        {activity.media_urls.length > 0 && (
+          <section aria-label="Photos" className="space-y-3">
+            <h2 className="text-lg font-semibold text-accent">Photos</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {activity.media_urls.map((url, i) => (
+                <div
+                  key={url}
+                  className="relative aspect-square overflow-hidden rounded-lg border border-border bg-muted"
+                >
+                  <Image
+                    src={url}
+                    alt={`${title} photo ${i + 1}`}
+                    fill
+                    sizes="(min-width: 1024px) 320px, (min-width: 640px) 33vw, 50vw"
+                    className="object-cover"
+                    loading={i < 2 ? 'eager' : 'lazy'}
+                  />
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {activity.partner_orgs.length > 0 && (
+          <section aria-label="Partners" className="space-y-3">
+            <h2 className="text-lg font-semibold text-accent">Partners</h2>
+            <div className="flex flex-wrap gap-2">
+              {activity.partner_orgs.map((p) => (
+                <span
+                  key={p}
+                  className="inline-flex items-center rounded-full border border-border bg-muted/60 px-3 py-1 text-xs font-medium text-accent"
+                >
+                  {p}
+                </span>
+              ))}
+            </div>
+          </section>
         )}
 
         {activity.notes && (
