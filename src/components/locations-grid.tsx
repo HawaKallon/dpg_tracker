@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { ArrowUpRight, GraduationCap, MapPin, Users } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
 import type { LocationBreakdown } from '@/lib/supabase/queries';
+import { cn } from '@/lib/utils/cn';
 
 const TYPE_ICON = {
   university: GraduationCap,
@@ -22,16 +22,14 @@ export function LocationsGrid({ data }: { data: LocationBreakdown[] }) {
 
   if (data.length === 0) {
     return (
-      <Card>
-        <CardContent className="py-10 text-center text-sm text-muted-foreground">
-          No locations recorded yet.
-        </CardContent>
-      </Card>
+      <div className="rounded-2xl border border-dashed border-border bg-card/50 py-10 text-center text-sm text-muted-foreground">
+        No locations recorded yet.
+      </div>
     );
   }
 
   return (
-    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
       {data.map((loc) => {
         const Icon = TYPE_ICON[loc.type as keyof typeof TYPE_ICON] ?? MapPin;
         const pct = (loc.total_participants / max) * 100;
@@ -40,63 +38,83 @@ export function LocationsGrid({ data }: { data: LocationBreakdown[] }) {
             ? Math.round((loc.female / loc.total_participants) * 100)
             : 0;
 
+        const inner = (
+          <article
+            className={cn(
+              'group rounded-2xl border border-border bg-card p-5 shadow-card transition-all',
+              'hover:border-accent/60 hover:-translate-y-0.5 hover:shadow-lift'
+            )}
+          >
+            <header className="flex items-start justify-between gap-3 mb-4">
+              <div className="flex items-start gap-3 min-w-0">
+                <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border bg-paper text-ink">
+                  <Icon className="size-4" />
+                </span>
+                <div className="min-w-0">
+                  <h3 className="text-base font-semibold leading-tight text-ink truncate group-hover:text-accent transition-colors">
+                    {loc.name}
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {TYPE_LABEL[loc.type as keyof typeof TYPE_LABEL] ?? 'Venue'} ·{' '}
+                    {loc.activity_count} {loc.activity_count === 1 ? 'event' : 'events'}
+                  </p>
+                </div>
+              </div>
+              <ArrowUpRight className="size-4 text-muted-foreground opacity-0 group-hover:opacity-100 group-hover:text-accent transition-all shrink-0" />
+            </header>
+
+            <div className="font-serif text-3xl sm:text-4xl tabular-nums leading-none text-ink">
+              {loc.total_participants.toLocaleString()}
+            </div>
+            <div className="text-eyebrow text-muted-foreground mt-1.5">
+              participants
+            </div>
+
+            <div className="mt-4 h-px w-full bg-border relative overflow-hidden">
+              <div
+                className="absolute inset-y-0 left-0 h-px bg-accent"
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+
+            <div className="flex items-center justify-between text-xs mt-3">
+              <div className="flex gap-3">
+                <span className="text-muted-foreground">
+                  M{' '}
+                  <span className="font-medium text-signal tabular-nums">
+                    {loc.male.toLocaleString()}
+                  </span>
+                </span>
+                <span className="text-muted-foreground">
+                  F{' '}
+                  <span className="font-medium text-accent tabular-nums">
+                    {loc.female.toLocaleString()}
+                  </span>
+                </span>
+              </div>
+              <span className="text-muted-foreground tabular-nums">
+                {femalePct}% female
+              </span>
+            </div>
+          </article>
+        );
+
+        if (!loc.slug) {
+          return (
+            <div key={loc.id}>
+              {inner}
+            </div>
+          );
+        }
+
         return (
           <Link
             key={loc.id}
             href={`/locations/${loc.slug}`}
-            className="group block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-xl"
+            className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-2xl"
             aria-label={`View ${loc.name} details`}
           >
-            <Card className="overflow-hidden transition-shadow group-hover:shadow-md">
-              <CardContent className="p-5 space-y-3">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-start gap-2 min-w-0">
-                    <div className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary-deep">
-                      <Icon className="size-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <h3 className="text-sm font-semibold leading-tight text-accent truncate group-hover:underline">
-                        {loc.name}
-                      </h3>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {TYPE_LABEL[loc.type as keyof typeof TYPE_LABEL] ?? 'Venue'} ·{' '}
-                        {loc.activity_count} {loc.activity_count === 1 ? 'event' : 'events'}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right shrink-0 flex flex-col items-end">
-                    <div className="text-2xl font-semibold tabular-nums leading-none text-accent">
-                      {loc.total_participants.toLocaleString()}
-                    </div>
-                    <div className="text-[10px] uppercase tracking-wide text-muted-foreground mt-1">
-                      participants
-                    </div>
-                  </div>
-                </div>
-
-                <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
-                  <div
-                    className="h-full bg-primary transition-all"
-                    style={{ width: `${pct}%` }}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between text-xs">
-                  <div className="flex gap-3">
-                    <span className="text-muted-foreground">
-                      M <span className="font-medium text-accent tabular-nums">{loc.male}</span>
-                    </span>
-                    <span className="text-muted-foreground">
-                      F <span className="font-medium text-pink tabular-nums">{loc.female}</span>
-                    </span>
-                  </div>
-                  <span className="inline-flex items-center gap-1 text-muted-foreground group-hover:text-primary-deep">
-                    {femalePct}% female
-                    <ArrowUpRight className="size-3 opacity-0 transition-opacity group-hover:opacity-100" />
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
+            {inner}
           </Link>
         );
       })}

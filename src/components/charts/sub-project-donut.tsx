@@ -1,8 +1,7 @@
 'use client';
 
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
-
-const PALETTE = ['#1CABE2', '#002759', '#FAB100', '#ec4899', '#5BC15B', '#7B61FF', '#0073b8', '#c2410c'];
+import { publicChartColors } from '@/lib/design/tokens';
 
 export type DonutSlice = {
   name: string;
@@ -37,19 +36,28 @@ export function SubProjectDonut({
           paddingAngle={2}
         >
           {data.map((_, i) => (
-            <Cell key={i} fill={PALETTE[i % PALETTE.length]} stroke="white" strokeWidth={2} />
+            <Cell
+              key={i}
+              fill={publicChartColors.series[i % publicChartColors.series.length]}
+              stroke={publicChartColors.tooltipBg}
+              strokeWidth={2}
+            />
           ))}
         </Pie>
         <Tooltip
           contentStyle={{
-            background: 'white',
-            border: '1px solid var(--border)',
-            borderRadius: 8,
+            background: publicChartColors.tooltipBg,
+            border: `1px solid ${publicChartColors.tooltipBorder}`,
+            borderRadius: 12,
             fontSize: 12,
+            color: '#1A1A1A',
           }}
           formatter={(v, n) => [Number(v ?? 0).toLocaleString(), String(n ?? '')]}
         />
-        <Legend wrapperStyle={{ fontSize: 12 }} />
+        <Legend
+          wrapperStyle={{ fontSize: 12, color: publicChartColors.axis }}
+          iconType="square"
+        />
       </PieChart>
     </ResponsiveContainer>
   );
