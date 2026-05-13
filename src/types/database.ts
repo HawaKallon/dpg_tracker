@@ -79,3 +79,12 @@ export type DashboardSummary = {
   activity_count: number;
   location_count: number;
 };
+
+export type DashboardSummaryCompare = DashboardSummary & {
+  prior_participants: number;
+  prior_male: number;
+  prior_female: number;
+  prior_reach: number;
+  prior_activity_count: number;
+  prior_location_count: number;
+};
