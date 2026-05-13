@@ -8,6 +8,8 @@ import { AdminNavLink, type AdminNavIcon } from '@/components/admin-nav-link';
 const NAV: { href: string; label: string; icon: AdminNavIcon }[] = [
   { href: '/admin', label: 'Overview', icon: 'overview' },
   { href: '/admin/activities', label: 'Activities', icon: 'activities' },
+  { href: '/admin/locations', label: 'Locations', icon: 'locations' },
+  { href: '/admin/sub-projects', label: 'Sub-projects', icon: 'programs' },
   { href: '/admin/lookups', label: 'Lookups', icon: 'lookups' },
   { href: '/admin/audit', label: 'Audit log', icon: 'audit' },
 ];

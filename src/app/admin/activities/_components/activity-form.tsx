@@ -1,14 +1,24 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { Plus, X } from 'lucide-react';
+import type { JSONContent } from '@tiptap/core';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
+import { RichTextEditor } from '@/components/editor/rich-text-editor';
+import { ChipInput } from '@/components/chip-input';
+import { MediaPicker } from '@/components/media-picker';
 import { createLocationInline, createSubCategoryInline } from '../actions';
-import type { Category, Location, SubCategory, SubProject } from '@/types/database';
+import type {
+  Category,
+  Location,
+  RichTextDoc,
+  SubCategory,
+  SubProject,
+} from '@/types/database';
 
 export type ActivityFormDefaults = {
   id?: string;
@@ -25,6 +35,10 @@ export type ActivityFormDefaults = {
   reach?: number | null;
   notes?: string | null;
   discourse_url?: string | null;
+  outcomes?: RichTextDoc | null;
+  highlights?: string | null;
+  media_urls?: string[] | null;
+  partner_orgs?: string[] | null;
 };
 
 type LocationLite = { id: string; name: string; type: string };
@@ -47,6 +61,7 @@ export function ActivityForm({
   locations: Location[];
   submitLabel?: string;
 }) {
+  const [activityId] = useState<string>(() => defaults?.id ?? crypto.randomUUID());
   const [subProjectId, setSubProjectId] = useState(defaults?.sub_project_id ?? '');
   const [categoryId, setCategoryId] = useState(defaults?.category_id ?? '');
   const [subCategoryId, setSubCategoryId] = useState(defaults?.sub_category_id ?? '');
@@ -55,6 +70,27 @@ export function ActivityForm({
   const [female, setFemale] = useState<string>(defaults?.female_count?.toString() ?? '');
   const [total, setTotal] = useState<string>(defaults?.total_count?.toString() ?? '');
   const [totalEdited, setTotalEdited] = useState(false);
+
+  const [outcomes, setOutcomes] = useState<JSONContent | null>(
+    (defaults?.outcomes ?? null) as JSONContent | null
+  );
+  const [partnerOrgs, setPartnerOrgs] = useState<string[]>(defaults?.partner_orgs ?? []);
+  const [keepUrls, setKeepUrls] = useState<string[]>(defaults?.media_urls ?? []);
+  const [newFiles, setNewFiles] = useState<File[]>([]);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  // Inject state-tracked files into FormData on submit so the server action receives them.
+  useEffect(() => {
+    const form = formRef.current;
+    if (!form) return;
+    const handler = (e: FormDataEvent) => {
+      for (const f of newFiles) {
+        e.formData.append('media_files', f, f.name);
+      }
+    };
+    form.addEventListener('formdata', handler);
+    return () => form.removeEventListener('formdata', handler);
+  }, [newFiles]);
 
   const [locList, setLocList] = useState<LocationLite[]>(
     locations.map((l) => ({ id: l.id, name: l.name, type: l.type }))
@@ -145,7 +181,16 @@ export function ActivityForm({
   }
 
   return (
-    <form action={action} className="space-y-8 w-full">
+    <form ref={formRef} action={action} className="space-y-8 w-full">
+      <input type="hidden" name="activity_id" value={activityId} />
+      <input
+        type="hidden"
+        name="outcomes"
+        value={outcomes ? JSON.stringify(outcomes) : ''}
+      />
+      {partnerOrgs.map((p, i) => (
+        <input key={`${p}-${i}`} type="hidden" name="partner_orgs" value={p} />
+      ))}
       <section>
         <header className="mb-4">
           <h2 className="text-sm font-semibold text-accent">Classification</h2>
@@ -481,6 +526,62 @@ export function ActivityForm({
             />
           </div>
         </div>
+      </section>
+
+      <section>
+        <header className="mb-4">
+          <h2 className="text-sm font-semibold text-accent">Story &amp; outcomes</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            What changed because of this activity? This is what funders read.
+          </p>
+        </header>
+        <div className="space-y-5">
+          <div className="space-y-1.5">
+            <Label htmlFor="outcomes">Outcomes</Label>
+            <RichTextEditor
+              value={outcomes}
+              onChange={setOutcomes}
+              placeholder="What did participants learn, build, or commit to?"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="highlights">Highlight quote</Label>
+            <Textarea
+              id="highlights"
+              name="highlights"
+              rows={2}
+              maxLength={280}
+              defaultValue={defaults?.highlights ?? ''}
+              placeholder="One memorable line — a participant quote, an outcome stat, anything funders should remember."
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Partner organizations</Label>
+            <ChipInput
+              values={partnerOrgs}
+              onChange={setPartnerOrgs}
+              placeholder="Type a name and press Enter or comma…"
+            />
+            <p className="text-xs text-muted-foreground">
+              Co-hosts, sponsors, or other orgs credited for this activity.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <header className="mb-4">
+          <h2 className="text-sm font-semibold text-accent">Photos</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Upload images from the activity. They appear on the public detail page.
+          </p>
+        </header>
+        <MediaPicker
+          keepUrls={keepUrls}
+          onKeepUrlsChange={setKeepUrls}
+          newFiles={newFiles}
+          onNewFilesChange={setNewFiles}
+        />
       </section>
 
       <div className="flex gap-2 justify-end pt-2 border-t border-border">

@@ -2,12 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, ListChecks, Database, History } from 'lucide-react';
+import { LayoutDashboard, ListChecks, Database, History, MapPin, FolderKanban } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
 
 const ICONS = {
   overview: LayoutDashboard,
   activities: ListChecks,
+  locations: MapPin,
+  programs: FolderKanban,
   lookups: Database,
   audit: History,
 } as const;
