@@ -19,7 +19,7 @@ export async function SiteHeader() {
           DPG Tracker
           <span className="ml-1 text-xs font-normal text-white/80">Sierra Leone</span>
         </Link>
-        <nav className="flex items-center gap-1">
+        <nav aria-label="Main navigation" className="flex items-center gap-1">
           <Link
             href="/"
             className="text-sm text-white/90 hover:text-white px-3 py-2 rounded-md hover:bg-white/10"
