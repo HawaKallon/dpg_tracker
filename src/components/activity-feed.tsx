@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { Calendar, ExternalLink, MapPin, Users2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -52,7 +53,12 @@ export function ActivityFeed({ items }: { items: ActivityWithRelations[] }) {
                     )}
                   </div>
                   <h3 className="text-sm font-semibold text-accent leading-snug">
-                    {a.sub_category?.name ?? a.category?.name ?? a.sub_project?.name ?? 'Activity'}
+                    <Link
+                      href={`/activities/${a.id}`}
+                      className="hover:underline focus-visible:outline-none focus-visible:underline"
+                    >
+                      {a.sub_category?.name ?? a.category?.name ?? a.sub_project?.name ?? 'Activity'}
+                    </Link>
                   </h3>
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5 text-xs text-muted-foreground">
                     <span className="inline-flex items-center gap-1">
