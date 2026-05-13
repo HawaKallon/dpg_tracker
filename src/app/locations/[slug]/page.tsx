@@ -1,16 +1,19 @@
+import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { ArrowLeft, ExternalLink, MapPin, GraduationCap, Users } from 'lucide-react';
-import { SiteHeader } from '@/components/site-header';
-import { KpiCard } from '@/components/kpi-card';
-import { Badge } from '@/components/ui/badge';
+import { ArrowLeft, ArrowUpRight, ExternalLink, MapPin, GraduationCap, Users } from 'lucide-react';
+import { SiteShell } from '@/components/public/site-shell';
+import { SectionEyebrow } from '@/components/public/section-eyebrow';
+import { StatTile } from '@/components/public/stat-tile';
+import { Reveal } from '@/components/public/reveal';
 import { MonthlyLine } from '@/components/charts/monthly-line';
 import { SubProjectDonut } from '@/components/charts/sub-project-donut';
 import { ActivityFeed } from '@/components/activity-feed';
 import { RichText } from '@/components/editor/rich-text';
 import { YearPicker } from '@/components/year-picker';
+import { PageSkeleton } from '@/components/page-skeleton';
 import {
   getLocationBySlug,
   getLocationSummary,
@@ -19,8 +22,6 @@ import {
   getActivitiesByLocation,
   getYears,
 } from '@/lib/supabase/queries';
-
-export const revalidate = 60;
 
 type Params = Promise<{ slug: string }>;
 type SearchParams = Promise<{ year?: string }>;
@@ -63,7 +64,20 @@ export async function generateMetadata({
   };
 }
 
-export default async function LocationDetailPage({
+export default function LocationDetailPage(props: {
+  params: Params;
+  searchParams: SearchParams;
+}) {
+  return (
+    <SiteShell>
+      <Suspense fallback={<PageSkeleton />}>
+        <LocationDetailContent {...props} />
+      </Suspense>
+    </SiteShell>
+  );
+}
+
+async function LocationDetailContent({
   params,
   searchParams,
 }: {
@@ -102,148 +116,187 @@ export default async function LocationDetailPage({
     .slice(0, 9);
 
   return (
-    <>
-      <SiteHeader />
+    <main id="main-content" className="mx-auto w-full max-w-7xl px-3 sm:px-4 lg:px-10 pt-6 sm:pt-8 pb-8 space-y-12 sm:space-y-16">
+      <nav aria-label="Breadcrumb">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-accent transition-colors"
+        >
+          <ArrowLeft className="size-4" aria-hidden="true" />
+          Back to dashboard
+        </Link>
+      </nav>
 
-      <main id="main-content" className="mx-auto max-w-7xl px-4 sm:px-6 py-8 space-y-10">
-        <nav aria-label="Breadcrumb">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-1.5 text-sm text-primary-deep hover:underline"
-          >
-            <ArrowLeft className="size-4" aria-hidden="true" />
-            Back to dashboard
-          </Link>
-        </nav>
-
-        <header className="space-y-5">
-          <div className="flex flex-wrap items-start gap-5">
-            {location.logo_url && (
-              <div className="relative size-20 shrink-0 overflow-hidden rounded-lg border border-border bg-muted">
-                <Image
-                  src={location.logo_url}
-                  alt={`${location.name} logo`}
-                  fill
-                  sizes="80px"
-                  className="object-cover"
-                />
-              </div>
-            )}
-            <div className="flex-1 min-w-0 space-y-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="default">
-                  <TypeIcon className="size-3" aria-hidden="true" />
-                  {typeLabel}
-                </Badge>
-                {location.partner_type && (
-                  <Badge variant="muted">{location.partner_type}</Badge>
-                )}
-                {location.region && (
-                  <span className="text-xs text-muted-foreground">{location.region}</span>
-                )}
-              </div>
-              <h1 className="text-3xl font-semibold tracking-tight text-accent">
-                {location.name}
-              </h1>
-              {location.website_url && (
-                <a
-                  href={location.website_url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1 text-sm text-primary-deep hover:underline"
-                >
-                  {location.website_url.replace(/^https?:\/\//, '').replace(/\/$/, '')}
-                  <ExternalLink className="size-3.5" aria-hidden="true" />
-                </a>
-              )}
-            </div>
-            <div className="shrink-0">
-              <YearPicker years={years} current={currentYear} />
-            </div>
-          </div>
-          {location.description && (
-            <div className="rounded-xl border border-border bg-card p-6">
-              <RichText json={location.description} />
+      {/* Hero ------------------------------------------------------- */}
+      <Reveal>
+      <header className="space-y-6">
+        <div className="flex flex-wrap items-start gap-5">
+          {location.logo_url && (
+            <div className="relative size-20 sm:size-24 shrink-0 overflow-hidden rounded-2xl border border-border bg-card shadow-card">
+              <Image
+                src={location.logo_url}
+                alt={`${location.name} logo`}
+                fill
+                sizes="96px"
+                className="object-contain p-1.5"
+              />
             </div>
           )}
-        </header>
-
-        <section
-          aria-label="Location metrics"
-          className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3"
-        >
-          <KpiCard
-            label="Participants"
-            value={summary.total_participants}
-            hint={femaleHint}
-          />
-          <KpiCard
-            label="Female"
-            value={summary.total_female}
-            forceRender={summary.total_participants > 0}
-          />
-          <KpiCard label="Activities" value={summary.activity_count} />
-          <KpiCard label="Reach" value={summary.total_reach} hint="Discourse + comms" />
-          <KpiCard label="Sub-projects" value={summary.sub_project_count} />
-        </section>
-
-        <section className="grid lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 rounded-xl border border-border bg-card p-5">
-            <header className="mb-3">
-              <h2 className="text-sm font-semibold text-accent">Activity over time</h2>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Monthly participants and number of events in {currentYear}
-              </p>
-            </header>
-            <MonthlyLine data={monthly} />
-          </div>
-          <div className="rounded-xl border border-border bg-card p-5">
-            <header className="mb-3">
-              <h2 className="text-sm font-semibold text-accent">Program mix</h2>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Participants by sub-project at this location
-              </p>
-            </header>
-            <SubProjectDonut data={mix} />
-          </div>
-        </section>
-
-        <section aria-label="Recent activities" className="space-y-4">
-          <div>
-            <h2 className="text-lg font-semibold tracking-tight text-accent">
-              Recent activities
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              Latest events at {location.name} in {currentYear}.
-            </p>
-          </div>
-          <ActivityFeed items={recent} />
-        </section>
-
-        {gallery.length > 0 && (
-          <section aria-label="Photos" className="space-y-4">
-            <h2 className="text-lg font-semibold tracking-tight text-accent">Photos</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-              {gallery.map(({ url, activityId }, i) => (
-                <Link
-                  key={url}
-                  href={`/activities/${activityId}`}
-                  className="relative aspect-square overflow-hidden rounded-lg border border-border bg-muted group"
-                >
-                  <Image
-                    src={url}
-                    alt=""
-                    fill
-                    sizes="(min-width: 1024px) 240px, (min-width: 640px) 33vw, 50vw"
-                    className="object-cover transition-transform group-hover:scale-105"
-                    loading={i < 4 ? 'eager' : 'lazy'}
-                  />
-                </Link>
-              ))}
+          <div className="flex-1 min-w-0 space-y-3">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-eyebrow text-muted-foreground">
+              <span className="inline-flex items-center gap-1.5 text-accent">
+                <TypeIcon className="size-3" aria-hidden="true" />
+                {typeLabel}
+              </span>
+              {location.partner_type && (
+                <>
+                  <span aria-hidden>·</span>
+                  <span>{location.partner_type}</span>
+                </>
+              )}
+              {location.region && (
+                <>
+                  <span aria-hidden>·</span>
+                  <span>{location.region}</span>
+                </>
+              )}
             </div>
-          </section>
+            <h1 className="text-display text-[clamp(2.25rem,6vw,4.5rem)] text-ink">
+              {location.name}.
+            </h1>
+            {location.website_url && (
+              <a
+                href={location.website_url}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-accent hover:text-accent-deep"
+              >
+                {location.website_url.replace(/^https?:\/\//, '').replace(/\/$/, '')}
+                <ExternalLink className="size-3.5" aria-hidden="true" />
+              </a>
+            )}
+          </div>
+          <div className="shrink-0">
+            <YearPicker years={years} current={currentYear} />
+          </div>
+        </div>
+        {location.description && (
+          <div className="rounded-3xl border border-border bg-card p-6 sm:p-8 max-w-3xl shadow-card">
+            <RichText json={location.description} />
+          </div>
         )}
-      </main>
-    </>
+      </header>
+      </Reveal>
+
+      {/* KPI strip ------------------------------------------------- */}
+      <Reveal delay={0.05}>
+      <section
+        aria-label="Location metrics"
+        className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6 sm:gap-8 rounded-3xl bg-paper shadow-card px-5 sm:px-8 py-8"
+      >
+        <StatTile
+          label="Participants"
+          value={summary.total_participants}
+          hint={femaleHint}
+          tone="primary"
+          forceRender
+        />
+        <StatTile
+          label="Female"
+          value={summary.total_female}
+          forceRender={summary.total_participants > 0}
+        />
+        <StatTile label="Activities" value={summary.activity_count} forceRender />
+        <StatTile
+          label="Reach"
+          value={summary.total_reach}
+          hint="Discourse + comms"
+          forceRender={summary.total_reach > 0}
+        />
+        <StatTile label="Sub-projects" value={summary.sub_project_count} forceRender />
+      </section>
+      </Reveal>
+
+      {/* Charts ---------------------------------------------------- */}
+      <Reveal delay={0.05}>
+      <section className="grid lg:grid-cols-3 gap-3 sm:gap-4">
+        <div className="lg:col-span-2 rounded-2xl border border-border bg-gradient-to-br from-card to-paper p-5 sm:p-6 shadow-card">
+          <header className="mb-4">
+            <SectionEyebrow tone="muted">By month</SectionEyebrow>
+            <h2 className="font-serif text-2xl text-ink mt-2 leading-tight">
+              Activity in {currentYear}
+            </h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Monthly participants and events at {location.name}.
+            </p>
+          </header>
+          <MonthlyLine data={monthly} />
+        </div>
+        <div className="rounded-2xl border border-border bg-gradient-to-br from-card to-paper p-5 sm:p-6 shadow-card">
+          <header className="mb-4">
+            <SectionEyebrow tone="muted">Program mix</SectionEyebrow>
+            <h2 className="font-serif text-2xl text-ink mt-2 leading-tight">
+              Sub-projects run here
+            </h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Participants by sub-project.
+            </p>
+          </header>
+          <SubProjectDonut data={mix} />
+        </div>
+      </section>
+      </Reveal>
+
+      {/* Recent activities ----------------------------------------- */}
+      <Reveal delay={0.05}>
+      <section aria-labelledby="recent-heading" className="space-y-5">
+        <header>
+          <SectionEyebrow tone="accent">Activity log</SectionEyebrow>
+          <h2 id="recent-heading" className="font-serif text-3xl text-ink mt-2 leading-tight">
+            Latest events
+          </h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            At {location.name}, in {currentYear}.
+          </p>
+        </header>
+        <ActivityFeed items={recent} />
+      </section>
+      </Reveal>
+
+      {/* Gallery --------------------------------------------------- */}
+      {gallery.length > 0 && (
+        <Reveal delay={0.05}>
+        <section aria-labelledby="gallery-heading" className="space-y-5">
+          <header>
+            <SectionEyebrow tone="accent">Photos</SectionEyebrow>
+            <h2 id="gallery-heading" className="font-serif text-3xl text-ink mt-2 leading-tight">
+              From recent activities
+            </h2>
+          </header>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
+            {gallery.map(({ url, activityId }, i) => (
+              <Link
+                key={url}
+                href={`/activities/${activityId}`}
+                className="group relative aspect-square overflow-hidden rounded-2xl border border-border bg-muted shadow-card hover:shadow-lift transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                <Image
+                  src={url}
+                  alt=""
+                  fill
+                  sizes="(min-width: 1024px) 240px, (min-width: 640px) 33vw, 50vw"
+                  className="object-cover transition-transform duration-500 group-hover:scale-[1.06]"
+                  loading={i < 4 ? 'eager' : 'lazy'}
+                />
+                <span className="absolute right-3 top-3 inline-flex items-center justify-center size-7 rounded-full bg-paper text-ink opacity-0 group-hover:opacity-100 transition-opacity">
+                  <ArrowUpRight className="size-3.5" />
+                </span>
+              </Link>
+            ))}
+          </div>
+        </section>
+        </Reveal>
+      )}
+    </main>
   );
 }
