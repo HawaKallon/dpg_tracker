@@ -8,11 +8,14 @@
 :root {
   --background: #ffffff;
   --paper: #ffffff;
-  --foreground: #0a0a0a;
-  --muted: #f4f4f5;
-  --muted-foreground: #52525b;
-  --border: #e4e4e7;
+  --foreground: #18181b;
+  --muted: #f5f5f5;
+  --muted-foreground: #71717a;
+  --border: #e5e5e5;
   --card: #ffffff;
+  --sidebar: #fafafa;
+  --sidebar-foreground: #18181b;
+  --sidebar-accent: #f1f1f2;
   --primary: #1CABE2;
   --primary-foreground: #ffffff;
   --primary-deep: #0073b8;
@@ -24,6 +27,8 @@
   --destructive: #c2410c;
   --success: #047857;
   --pink: #ec4899;
+  --ring: #d4d4d8;
+  --radius: 0.625rem;
 }
 
 /* ------------------------------------------------------------------
@@ -88,6 +93,10 @@
   --color-destructive: var(--destructive);
   --color-success: var(--success);
   --color-pink: var(--pink);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-ring: var(--ring);
   --font-sans: var(--font-bricolage);
   --font-serif: var(--font-newsreader);
   --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
