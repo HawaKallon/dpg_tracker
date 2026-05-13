@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { ExternalLink, LogOut, Search, Bell } from 'lucide-react';
@@ -14,7 +15,27 @@ const NAV: { href: string; label: string; icon: AdminNavIcon }[] = [
   { href: '/admin/audit', label: 'Audit log', icon: 'audit' },
 ];
 
-export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <Suspense fallback={<AdminLayoutSkeleton />}>
+      <AdminShell>{children}</AdminShell>
+    </Suspense>
+  );
+}
+
+function AdminLayoutSkeleton() {
+  return (
+    <div className="min-h-screen flex bg-background">
+      <aside className="hidden md:flex md:w-60 lg:w-64 border-r border-border bg-background shrink-0" />
+      <div className="flex-1 px-4 md:px-6 py-6 space-y-4">
+        <div className="h-8 w-48 rounded bg-muted/50 animate-pulse" />
+        <div className="h-64 rounded-xl bg-muted/40 animate-pulse" />
+      </div>
+    </div>
+  );
+}
+
+async function AdminShell({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
   const {
     data: { user },

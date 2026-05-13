@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { RichTextEditor } from '@/components/editor/rich-text-editor';
 import { ChipInput } from '@/components/chip-input';
+import { TaxonomyChips } from '@/components/taxonomy-chips';
 import { MediaPicker } from '@/components/media-picker';
 import { createLocationInline, createSubCategoryInline } from '../actions';
 import type {
@@ -39,6 +40,8 @@ export type ActivityFormDefaults = {
   highlights?: string | null;
   media_urls?: string[] | null;
   partner_orgs?: string[] | null;
+  age_bands?: string[] | null;
+  roles?: string[] | null;
 };
 
 type LocationLite = { id: string; name: string; type: string };
@@ -51,6 +54,8 @@ export function ActivityForm({
   categories,
   subCategories,
   locations,
+  ageBandOptions,
+  roleOptions,
   submitLabel = 'Save activity',
 }: {
   action: (formData: FormData) => void | Promise<void>;
@@ -59,6 +64,8 @@ export function ActivityForm({
   categories: Category[];
   subCategories: SubCategory[];
   locations: Location[];
+  ageBandOptions: string[];
+  roleOptions: string[];
   submitLabel?: string;
 }) {
   const [activityId] = useState<string>(() => defaults?.id ?? crypto.randomUUID());
@@ -75,6 +82,8 @@ export function ActivityForm({
     (defaults?.outcomes ?? null) as JSONContent | null
   );
   const [partnerOrgs, setPartnerOrgs] = useState<string[]>(defaults?.partner_orgs ?? []);
+  const [ageBands, setAgeBands] = useState<string[]>(defaults?.age_bands ?? []);
+  const [roles, setRoles] = useState<string[]>(defaults?.roles ?? []);
   const [keepUrls, setKeepUrls] = useState<string[]>(defaults?.media_urls ?? []);
   const [newFiles, setNewFiles] = useState<File[]>([]);
   const formRef = useRef<HTMLFormElement>(null);
@@ -190,6 +199,12 @@ export function ActivityForm({
       />
       {partnerOrgs.map((p, i) => (
         <input key={`${p}-${i}`} type="hidden" name="partner_orgs" value={p} />
+      ))}
+      {ageBands.map((p, i) => (
+        <input key={`ab-${p}-${i}`} type="hidden" name="age_bands" value={p} />
+      ))}
+      {roles.map((p, i) => (
+        <input key={`r-${p}-${i}`} type="hidden" name="roles" value={p} />
       ))}
       <section>
         <header className="mb-4">
@@ -565,6 +580,35 @@ export function ActivityForm({
             <p className="text-xs text-muted-foreground">
               Co-hosts, sponsors, or other orgs credited for this activity.
             </p>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <header className="mb-4">
+          <h2 className="text-sm font-semibold text-accent">Demographics</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Who attended? Pick from the controlled vocabulary so reports can roll up cleanly.
+          </p>
+        </header>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div className="space-y-1.5">
+            <Label>Age bands</Label>
+            <TaxonomyChips
+              values={ageBands}
+              onChange={setAgeBands}
+              options={ageBandOptions}
+              placeholder="Add an age band…"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Roles</Label>
+            <TaxonomyChips
+              values={roles}
+              onChange={setRoles}
+              options={roleOptions}
+              placeholder="Add a role…"
+            />
           </div>
         </div>
       </section>

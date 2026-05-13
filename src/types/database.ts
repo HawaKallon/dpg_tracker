@@ -67,6 +67,8 @@ export type Activity = {
   highlights: string | null;
   media_urls: string[];
   partner_orgs: string[];
+  age_bands: string[];
+  roles: string[];
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -114,3 +116,11 @@ export type DashboardSummaryCompare = DashboardSummary & {
   prior_activity_count: number;
   prior_location_count: number;
 };
+
+export type DemographicsTaxonomyItem = {
+  id: string;
+  kind: 'age_band' | 'role';
+  value: string;
+  display_order: number;
+};
+

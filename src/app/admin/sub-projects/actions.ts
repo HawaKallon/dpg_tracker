@@ -1,9 +1,10 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, updateTag } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { uploadSubProjectHero, uploadFunderLogo } from '@/lib/supabase/storage';
+import { rateLimit } from '@/lib/security/rate-limit';
 import type { RichTextDoc } from '@/types/database';
 
 function nullable(v: FormDataEntryValue | null): string | null {
@@ -42,6 +43,12 @@ async function requireAuth() {
   return { supabase, user };
 }
 
+async function gate() {
+  const ctx = await requireAuth();
+  await rateLimit(ctx.user.id, 'sub-project:write', { max: 20 });
+  return ctx;
+}
+
 function payloadFromForm(formData: FormData) {
   return {
     name: nullable(formData.get('name')) ?? '',
@@ -54,7 +61,7 @@ function payloadFromForm(formData: FormData) {
 }
 
 export async function createSubProject(formData: FormData) {
-  const { supabase } = await requireAuth();
+  const { supabase } = await gate();
   const payload = payloadFromForm(formData);
   if (!payload.name) throw new Error('Name is required');
   if (!payload.slug) throw new Error('Slug is required');
@@ -78,13 +85,15 @@ export async function createSubProject(formData: FormData) {
     .insert({ id, ...payload, hero_image_url, funder_logo_url });
   if (error) throw new Error(error.message);
 
+  updateTag('taxonomy:sub-projects');
+  updateTag('dashboard');
+  if (payload.slug) updateTag(`sub-project:${payload.slug}`);
   revalidatePath('/admin/sub-projects');
-  revalidatePath('/');
   redirect('/admin/sub-projects');
 }
 
 export async function updateSubProject(id: string, formData: FormData) {
-  const { supabase } = await requireAuth();
+  const { supabase } = await gate();
   const payload = payloadFromForm(formData);
   if (!payload.name) throw new Error('Name is required');
   if (!payload.slug) throw new Error('Slug is required');
@@ -116,20 +125,28 @@ export async function updateSubProject(id: string, formData: FormData) {
     .eq('id', id);
   if (error) throw new Error(error.message);
 
+  updateTag('taxonomy:sub-projects');
+  updateTag('dashboard');
+  if (prevSlug) updateTag(`sub-project:${prevSlug}`);
+  if (payload.slug && payload.slug !== prevSlug) updateTag(`sub-project:${payload.slug}`);
   revalidatePath('/admin/sub-projects');
   revalidatePath(`/admin/sub-projects/${id}`);
-  if (prevSlug) revalidatePath(`/programs/${prevSlug}`);
-  if (payload.slug) revalidatePath(`/programs/${payload.slug}`);
-  revalidatePath('/');
   redirect('/admin/sub-projects');
 }
 
 export async function deleteSubProject(formData: FormData) {
-  const { supabase } = await requireAuth();
+  const { supabase } = await gate();
   const id = String(formData.get('id') ?? '');
   if (!id) return;
+  const { data: prev } = await supabase
+    .from('sub_projects')
+    .select('slug')
+    .eq('id', id)
+    .maybeSingle();
   const { error } = await supabase.from('sub_projects').delete().eq('id', id);
   if (error) throw new Error(error.message);
+  updateTag('taxonomy:sub-projects');
+  updateTag('dashboard');
+  if (prev?.slug) updateTag(`sub-project:${prev.slug}`);
   revalidatePath('/admin/sub-projects');
-  revalidatePath('/');
 }

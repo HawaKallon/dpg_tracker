@@ -1,10 +1,24 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, updateTag } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { uploadActivityMedia } from '@/lib/supabase/storage';
+import { rateLimit } from '@/lib/security/rate-limit';
 import type { RichTextDoc } from '@/types/database';
+
+function invalidateActivity(
+  activityId: string,
+  year: number | null,
+  slugs?: { location?: string | null; subProject?: string | null }
+) {
+  updateTag('dashboard');
+  updateTag('partners');
+  updateTag(`activity:${activityId}`);
+  if (year) updateTag(`dashboard:year:${year}`);
+  if (slugs?.location) updateTag(`location:${slugs.location}`);
+  if (slugs?.subProject) updateTag(`sub-project:${slugs.subProject}`);
+}
 
 function nullable(v: FormDataEntryValue | null): string | null {
   if (v === null) return null;
@@ -80,11 +94,30 @@ function payloadFromForm(formData: FormData) {
     outcomes: parseRichText(formData.get('outcomes')),
     highlights: nullable(formData.get('highlights')),
     partner_orgs: stringArray(formData.getAll('partner_orgs')),
+    age_bands: stringArray(formData.getAll('age_bands')),
+    roles: stringArray(formData.getAll('roles')),
+  };
+}
+
+async function resolveSlugs(
+  supabase: Awaited<ReturnType<typeof requireAuth>>['supabase'],
+  payload: { location_id: string | null; sub_project_id: string }
+) {
+  const [locRes, spRes] = await Promise.all([
+    payload.location_id
+      ? supabase.from('locations').select('slug').eq('id', payload.location_id).maybeSingle()
+      : Promise.resolve({ data: null }),
+    supabase.from('sub_projects').select('slug').eq('id', payload.sub_project_id).maybeSingle(),
+  ]);
+  return {
+    location: (locRes.data as { slug?: string } | null)?.slug ?? null,
+    subProject: (spRes.data as { slug?: string } | null)?.slug ?? null,
   };
 }
 
 export async function createActivity(formData: FormData) {
   const { supabase, user } = await requireAuth();
+  await rateLimit(user.id, 'activity:write', { max: 20 });
   const payload = payloadFromForm(formData);
   if (!payload.sub_project_id) throw new Error('Sub-project is required');
 
@@ -103,16 +136,23 @@ export async function createActivity(formData: FormData) {
   });
   if (error) throw new Error(error.message);
 
+  const slugs = await resolveSlugs(supabase, payload);
+  invalidateActivity(activityId, payload.event_year, slugs);
   revalidatePath('/admin/activities');
-  revalidatePath('/');
-  revalidatePath(`/activities/${activityId}`);
   redirect('/admin/activities');
 }
 
 export async function updateActivity(id: string, formData: FormData) {
-  const { supabase } = await requireAuth();
+  const { supabase, user } = await requireAuth();
+  await rateLimit(user.id, 'activity:write', { max: 30 });
   const payload = payloadFromForm(formData);
   if (!payload.sub_project_id) throw new Error('Sub-project is required');
+
+  const { data: prev } = await supabase
+    .from('activities')
+    .select('event_year, sub_project_id, location_id')
+    .eq('id', id)
+    .maybeSingle();
 
   const keepUrls = stringArray(formData.getAll('keep_urls'));
   const newFiles = fileArray(formData.getAll('media_files'));
@@ -126,21 +166,46 @@ export async function updateActivity(id: string, formData: FormData) {
     .eq('id', id);
   if (error) throw new Error(error.message);
 
+  // Invalidate both the previous slugs/year and the new ones so reassignments propagate.
+  if (prev) {
+    const prevSlugs = await resolveSlugs(supabase, {
+      location_id: (prev as { location_id: string | null }).location_id,
+      sub_project_id: (prev as { sub_project_id: string }).sub_project_id,
+    });
+    invalidateActivity(id, (prev as { event_year: number }).event_year, prevSlugs);
+  }
+  const slugs = await resolveSlugs(supabase, payload);
+  invalidateActivity(id, payload.event_year, slugs);
   revalidatePath('/admin/activities');
   revalidatePath(`/admin/activities/${id}`);
-  revalidatePath(`/activities/${id}`);
-  revalidatePath('/');
   redirect('/admin/activities');
 }
 
 export async function deleteActivity(formData: FormData) {
-  const { supabase } = await requireAuth();
+  const { supabase, user } = await requireAuth();
+  await rateLimit(user.id, 'activity:write', { max: 20 });
   const id = String(formData.get('id') ?? '');
   if (!id) return;
+
+  const { data: prev } = await supabase
+    .from('activities')
+    .select('event_year, sub_project_id, location_id')
+    .eq('id', id)
+    .maybeSingle();
+
   const { error } = await supabase.from('activities').delete().eq('id', id);
   if (error) throw new Error(error.message);
+
+  if (prev) {
+    const slugs = await resolveSlugs(supabase, {
+      location_id: (prev as { location_id: string | null }).location_id,
+      sub_project_id: (prev as { sub_project_id: string }).sub_project_id,
+    });
+    invalidateActivity(id, (prev as { event_year: number }).event_year, slugs);
+  } else {
+    invalidateActivity(id, null);
+  }
   revalidatePath('/admin/activities');
-  revalidatePath('/');
 }
 
 // ---- Inline creators (called from the activity form) ----
@@ -149,7 +214,8 @@ export async function createLocationInline(input: {
   name: string;
   type: 'university' | 'hub' | 'online' | 'other';
 }): Promise<{ id: string; name: string; type: string }> {
-  const { supabase } = await requireAuth();
+  const { supabase, user } = await requireAuth();
+  await rateLimit(user.id, 'lookup:write', { max: 30 });
   const name = input.name.trim();
   if (!name) throw new Error('Name is required');
 
@@ -167,6 +233,7 @@ export async function createLocationInline(input: {
     .single();
   if (error) throw new Error(error.message);
 
+  updateTag('taxonomy:locations');
   revalidatePath('/admin/lookups');
   return data;
 }
@@ -175,7 +242,8 @@ export async function createSubCategoryInline(input: {
   category_id: string;
   name: string;
 }): Promise<{ id: string; category_id: string; name: string }> {
-  const { supabase } = await requireAuth();
+  const { supabase, user } = await requireAuth();
+  await rateLimit(user.id, 'lookup:write', { max: 30 });
   const name = input.name.trim();
   if (!input.category_id) throw new Error('Pick a category first');
   if (!name) throw new Error('Name is required');
@@ -195,6 +263,7 @@ export async function createSubCategoryInline(input: {
     .single();
   if (error) throw new Error(error.message);
 
+  updateTag('taxonomy:categories');
   revalidatePath('/admin/lookups');
   return data;
 }

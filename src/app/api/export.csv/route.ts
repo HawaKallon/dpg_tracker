@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getAllActivities } from '@/lib/supabase/queries';
 
-export const dynamic = 'force-dynamic';
-
 const HEADERS = [
   'year',
   'date',

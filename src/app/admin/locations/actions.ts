@@ -1,9 +1,10 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, updateTag } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { uploadLocationLogo } from '@/lib/supabase/storage';
+import { rateLimit } from '@/lib/security/rate-limit';
 import type { RichTextDoc } from '@/types/database';
 
 function nullable(v: FormDataEntryValue | null): string | null {
@@ -42,6 +43,12 @@ async function requireAuth() {
   return { supabase, user };
 }
 
+async function gate() {
+  const ctx = await requireAuth();
+  await rateLimit(ctx.user.id, 'location:write', { max: 20 });
+  return ctx;
+}
+
 type LocationType = 'university' | 'hub' | 'online' | 'other';
 
 function payloadFromForm(formData: FormData) {
@@ -65,7 +72,7 @@ function payloadFromForm(formData: FormData) {
 }
 
 export async function createLocation(formData: FormData) {
-  const { supabase } = await requireAuth();
+  const { supabase } = await gate();
   const payload = payloadFromForm(formData);
   if (!payload.name) throw new Error('Name is required');
 
@@ -79,13 +86,14 @@ export async function createLocation(formData: FormData) {
   const { error } = await supabase.from('locations').insert({ id, ...payload, logo_url });
   if (error) throw new Error(error.message);
 
+  updateTag('taxonomy:locations');
+  updateTag('dashboard');
   revalidatePath('/admin/locations');
-  revalidatePath('/');
   redirect('/admin/locations');
 }
 
 export async function updateLocation(id: string, formData: FormData) {
-  const { supabase } = await requireAuth();
+  const { supabase } = await gate();
   const payload = payloadFromForm(formData);
   if (!payload.name) throw new Error('Name is required');
 
@@ -109,20 +117,28 @@ export async function updateLocation(id: string, formData: FormData) {
     .eq('id', id);
   if (error) throw new Error(error.message);
 
+  updateTag('taxonomy:locations');
+  updateTag('dashboard');
+  if (prevSlug) updateTag(`location:${prevSlug}`);
+  if (payload.slug && payload.slug !== prevSlug) updateTag(`location:${payload.slug}`);
   revalidatePath('/admin/locations');
   revalidatePath(`/admin/locations/${id}`);
-  if (prevSlug) revalidatePath(`/locations/${prevSlug}`);
-  if (payload.slug) revalidatePath(`/locations/${payload.slug}`);
-  revalidatePath('/');
   redirect('/admin/locations');
 }
 
 export async function deleteLocation(formData: FormData) {
-  const { supabase } = await requireAuth();
+  const { supabase } = await gate();
   const id = String(formData.get('id') ?? '');
   if (!id) return;
+  const { data: prev } = await supabase
+    .from('locations')
+    .select('slug')
+    .eq('id', id)
+    .maybeSingle();
   const { error } = await supabase.from('locations').delete().eq('id', id);
   if (error) throw new Error(error.message);
+  updateTag('taxonomy:locations');
+  updateTag('dashboard');
+  if (prev?.slug) updateTag(`location:${prev.slug}`);
   revalidatePath('/admin/locations');
-  revalidatePath('/');
 }
