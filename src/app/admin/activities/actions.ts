@@ -48,6 +48,7 @@ function payloadFromForm(formData: FormData) {
     male_count: male,
     female_count: female,
     total_count: total,
+    reach: nullableInt(formData.get('reach')),
     notes: nullable(formData.get('notes')),
     discourse_url: nullable(formData.get('discourse_url')),
   };

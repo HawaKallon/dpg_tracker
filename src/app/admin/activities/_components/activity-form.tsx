@@ -22,6 +22,7 @@ export type ActivityFormDefaults = {
   male_count?: number | null;
   female_count?: number | null;
   total_count?: number | null;
+  reach?: number | null;
   notes?: string | null;
   discourse_url?: string | null;
 };
@@ -391,12 +392,13 @@ export function ActivityForm({
 
       <section>
         <header className="mb-4">
-          <h2 className="text-sm font-semibold text-accent">Participants</h2>
+          <h2 className="text-sm font-semibold text-accent">Participants & reach</h2>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Total auto-calculates from M + F until you edit it.
+            Total auto-calculates from M + F until you edit it. Reach is the broader audience
+            (Discourse views, social engagement, livestream viewers).
           </p>
         </header>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
           <div className="space-y-1.5">
             <Label htmlFor="male_count">Male</Label>
             <Input
@@ -432,6 +434,20 @@ export function ActivityForm({
                 setTotal(e.target.value);
               }}
             />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="reach">Reach</Label>
+            <Input
+              id="reach"
+              name="reach"
+              type="number"
+              min={0}
+              defaultValue={defaults?.reach ?? ''}
+              placeholder="e.g. 1200"
+            />
+            <p className="text-xs text-muted-foreground">
+              Broader audience touched (not in-person participants).
+            </p>
           </div>
         </div>
       </section>
