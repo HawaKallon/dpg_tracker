@@ -1,9 +1,23 @@
+/**
+ * Tiptap document JSON. Kept structural so this module doesn't depend on @tiptap/core.
+ * PR B (editor stack) aliases this to JSONContent from @tiptap/core.
+ */
+export type RichTextDoc = {
+  type: string;
+  content?: unknown[];
+  [key: string]: unknown;
+};
+
 export type SubProject = {
   id: string;
   name: string;
   slug: string;
   display_order: number;
   is_active: boolean;
+  description: RichTextDoc | null;
+  hero_image_url: string | null;
+  funder_name: string | null;
+  funder_logo_url: string | null;
 };
 
 export type Category = {
@@ -23,6 +37,14 @@ export type Location = {
   name: string;
   type: 'university' | 'hub' | 'online' | 'other';
   region: string | null;
+  slug: string;
+  description: RichTextDoc | null;
+  logo_url: string | null;
+  website_url: string | null;
+  lat: number | null;
+  lng: number | null;
+  partner_type: string | null;
+  first_active_date: string | null;
 };
 
 export type Activity = {
@@ -41,6 +63,10 @@ export type Activity = {
   notes: string | null;
   discourse_url: string | null;
   data_source: string | null;
+  outcomes: RichTextDoc | null;
+  highlights: string | null;
+  media_urls: string[];
+  partner_orgs: string[];
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -50,7 +76,7 @@ export type ActivityWithRelations = Activity & {
   sub_project: Pick<SubProject, 'id' | 'name' | 'slug'> | null;
   category: Pick<Category, 'id' | 'name'> | null;
   sub_category: Pick<SubCategory, 'id' | 'name'> | null;
-  location: Pick<Location, 'id' | 'name' | 'type'> | null;
+  location: Pick<Location, 'id' | 'name' | 'type' | 'slug'> | null;
 };
 
 export type Profile = {

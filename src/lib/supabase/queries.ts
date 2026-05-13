@@ -87,6 +87,7 @@ export async function getByMonth(year?: number | null): Promise<MonthlyPoint[]> 
 export type LocationBreakdown = {
   id: string;
   name: string;
+  slug: string;
   type: string;
   total_participants: number;
   male: number;
@@ -121,7 +122,7 @@ export async function getRecentActivities(
       sub_project:sub_projects(id, name, slug),
       category:categories(id, name),
       sub_category:sub_categories(id, name),
-      location:locations(id, name, type)
+      location:locations(id, name, type, slug)
     `);
   if (year) q = q.eq('event_year', year);
   if (filters.sub_project_id) q = q.eq('sub_project_id', filters.sub_project_id);
@@ -146,7 +147,7 @@ export async function getActivityById(id: string): Promise<ActivityWithRelations
       sub_project:sub_projects(id, name, slug),
       category:categories(id, name),
       sub_category:sub_categories(id, name),
-      location:locations(id, name, type)
+      location:locations(id, name, type, slug)
     `
     )
     .eq('id', id)
@@ -206,4 +207,212 @@ export async function getLocations(): Promise<Location[]> {
   const { data, error } = await supabase.from('locations').select('*').order('name');
   if (error || !data) return [];
   return data as Location[];
+}
+
+// ============================================================
+// Detail-page queries (Phase 2)
+// ============================================================
+
+export async function getLocationBySlug(slug: string): Promise<Location | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('locations')
+    .select('*')
+    .eq('slug', slug)
+    .maybeSingle();
+  if (error || !data) return null;
+  return data as Location;
+}
+
+export async function getSubProjectBySlug(slug: string): Promise<SubProject | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('sub_projects')
+    .select('*')
+    .eq('slug', slug)
+    .maybeSingle();
+  if (error || !data) return null;
+  return data as SubProject;
+}
+
+export type LocationSummary = {
+  total_participants: number;
+  total_male: number;
+  total_female: number;
+  total_reach: number;
+  activity_count: number;
+  sub_project_count: number;
+};
+
+export async function getLocationSummary(
+  slug: string,
+  year?: number | null
+): Promise<LocationSummary> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .rpc('location_summary', { p_slug: slug, p_year: year ?? null })
+    .single();
+  if (error || !data) {
+    return {
+      total_participants: 0,
+      total_male: 0,
+      total_female: 0,
+      total_reach: 0,
+      activity_count: 0,
+      sub_project_count: 0,
+    };
+  }
+  return data as LocationSummary;
+}
+
+export async function getLocationMonthly(
+  slug: string,
+  year?: number | null
+): Promise<MonthlyPoint[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc('location_monthly', {
+    p_slug: slug,
+    p_year: year ?? null,
+  });
+  if (error || !data) return [];
+  return data as MonthlyPoint[];
+}
+
+export type MixSlice = {
+  id: string;
+  name: string;
+  slug: string;
+  total_participants: number;
+  activity_count: number;
+};
+
+export async function getLocationSubProjectMix(
+  slug: string,
+  year?: number | null
+): Promise<MixSlice[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc('location_sub_project_mix', {
+    p_slug: slug,
+    p_year: year ?? null,
+  });
+  if (error || !data) return [];
+  return data as MixSlice[];
+}
+
+export async function getActivitiesByLocation(
+  slug: string,
+  year?: number | null,
+  limit = 12
+): Promise<ActivityWithRelations[]> {
+  const supabase = await createClient();
+  const { data: loc } = await supabase
+    .from('locations')
+    .select('id')
+    .eq('slug', slug)
+    .maybeSingle();
+  if (!loc) return [];
+  let q = supabase
+    .from('activities')
+    .select(`
+      *,
+      sub_project:sub_projects(id, name, slug),
+      category:categories(id, name),
+      sub_category:sub_categories(id, name),
+      location:locations(id, name, type, slug)
+    `)
+    .eq('location_id', loc.id);
+  if (year) q = q.eq('event_year', year);
+  const { data, error } = await q
+    .order('activity_date', { ascending: false, nullsFirst: false })
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (error || !data) return [];
+  return data as unknown as ActivityWithRelations[];
+}
+
+export type SubProjectSummary = {
+  total_participants: number;
+  total_male: number;
+  total_female: number;
+  total_reach: number;
+  activity_count: number;
+  location_count: number;
+};
+
+export async function getSubProjectSummary(
+  slug: string,
+  year?: number | null
+): Promise<SubProjectSummary> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .rpc('sub_project_summary', { p_slug: slug, p_year: year ?? null })
+    .single();
+  if (error || !data) {
+    return {
+      total_participants: 0,
+      total_male: 0,
+      total_female: 0,
+      total_reach: 0,
+      activity_count: 0,
+      location_count: 0,
+    };
+  }
+  return data as SubProjectSummary;
+}
+
+export async function getSubProjectMonthly(
+  slug: string,
+  year?: number | null
+): Promise<MonthlyPoint[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc('sub_project_monthly', {
+    p_slug: slug,
+    p_year: year ?? null,
+  });
+  if (error || !data) return [];
+  return data as MonthlyPoint[];
+}
+
+export async function getSubProjectLocationMix(
+  slug: string,
+  year?: number | null
+): Promise<MixSlice[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc('sub_project_location_mix', {
+    p_slug: slug,
+    p_year: year ?? null,
+  });
+  if (error || !data) return [];
+  return data as MixSlice[];
+}
+
+export async function getActivitiesBySubProject(
+  slug: string,
+  year?: number | null,
+  limit = 12
+): Promise<ActivityWithRelations[]> {
+  const supabase = await createClient();
+  const { data: sp } = await supabase
+    .from('sub_projects')
+    .select('id')
+    .eq('slug', slug)
+    .maybeSingle();
+  if (!sp) return [];
+  let q = supabase
+    .from('activities')
+    .select(`
+      *,
+      sub_project:sub_projects(id, name, slug),
+      category:categories(id, name),
+      sub_category:sub_categories(id, name),
+      location:locations(id, name, type, slug)
+    `)
+    .eq('sub_project_id', sp.id);
+  if (year) q = q.eq('event_year', year);
+  const { data, error } = await q
+    .order('activity_date', { ascending: false, nullsFirst: false })
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (error || !data) return [];
+  return data as unknown as ActivityWithRelations[];
 }
