@@ -11,16 +11,18 @@ export function KpiCard({
   value,
   hint,
   delta,
+  forceRender,
   className,
 }: {
   label: string;
   value: number | string;
   hint?: string;
   delta?: KpiDelta;
+  forceRender?: boolean;
   className?: string;
 }) {
   if (value == null) return null;
-  if (typeof value === 'number' && value === 0) return null;
+  if (!forceRender && typeof value === 'number' && value === 0) return null;
 
   return (
     <div className={cn('rounded-xl border border-border bg-card p-5', className)}>

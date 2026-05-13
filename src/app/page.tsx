@@ -107,12 +107,14 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
           <KpiCard
             label="Male"
             value={summary.total_male}
+            forceRender={summary.total_participants > 0}
             delta={delta(summary.total_male, summary.prior_male)}
           />
           <KpiCard
             label="Female"
             value={summary.total_female}
             hint={femaleHint}
+            forceRender={summary.total_participants > 0}
             delta={delta(summary.total_female, summary.prior_female)}
           />
           <KpiCard
