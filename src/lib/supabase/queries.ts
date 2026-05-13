@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import type {
   ActivityWithRelations,
   DashboardSummary,
+  DashboardSummaryCompare,
   Location,
   SubProject,
   Category,
@@ -32,6 +33,28 @@ export async function getDashboardSummary(year?: number | null): Promise<Dashboa
     };
   }
   return data as DashboardSummary;
+}
+
+export async function getDashboardSummaryCompare(
+  year: number
+): Promise<DashboardSummaryCompare> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .rpc('dashboard_summary_compare', { p_year: year })
+    .single();
+  if (error || !data) {
+    const fallback = await getDashboardSummary(year);
+    return {
+      ...fallback,
+      prior_participants: 0,
+      prior_male: 0,
+      prior_female: 0,
+      prior_reach: 0,
+      prior_activity_count: 0,
+      prior_location_count: 0,
+    };
+  }
+  return data as DashboardSummaryCompare;
 }
 
 export type SubProjectBreakdown = {
@@ -78,9 +101,17 @@ export async function getByLocation(year?: number | null): Promise<LocationBreak
   return data as LocationBreakdown[];
 }
 
+export type ActivityFilters = {
+  sub_project_id?: string | null;
+  location_id?: string | null;
+  date_from?: string | null;
+  date_to?: string | null;
+};
+
 export async function getRecentActivities(
   year?: number | null,
-  limit = 12
+  limit = 12,
+  filters: ActivityFilters = {}
 ): Promise<ActivityWithRelations[]> {
   const supabase = await createClient();
   let q = supabase
@@ -93,12 +124,35 @@ export async function getRecentActivities(
       location:locations(id, name, type)
     `);
   if (year) q = q.eq('event_year', year);
+  if (filters.sub_project_id) q = q.eq('sub_project_id', filters.sub_project_id);
+  if (filters.location_id) q = q.eq('location_id', filters.location_id);
+  if (filters.date_from) q = q.gte('activity_date', filters.date_from);
+  if (filters.date_to) q = q.lte('activity_date', filters.date_to);
   const { data, error } = await q
     .order('activity_date', { ascending: false, nullsFirst: false })
     .order('created_at', { ascending: false })
     .limit(limit);
   if (error || !data) return [];
   return data as unknown as ActivityWithRelations[];
+}
+
+export async function getActivityById(id: string): Promise<ActivityWithRelations | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('activities')
+    .select(
+      `
+      *,
+      sub_project:sub_projects(id, name, slug),
+      category:categories(id, name),
+      sub_category:sub_categories(id, name),
+      location:locations(id, name, type)
+    `
+    )
+    .eq('id', id)
+    .maybeSingle();
+  if (error || !data) return null;
+  return data as unknown as ActivityWithRelations;
 }
 
 export async function getAllActivities(year?: number | null): Promise<ActivityWithRelations[]> {
