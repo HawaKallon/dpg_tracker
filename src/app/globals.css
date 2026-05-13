@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
 
 /* UNICEF palette: Cyan blue #1CABE2 (primary), white, deep navy #002759 for emphasis. */
 :root {
