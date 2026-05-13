@@ -4,6 +4,8 @@ import {
   getLocationSummary,
   getYears,
 } from '@/lib/supabase/queries';
+import { loadOgFonts } from '@/lib/og/fonts';
+import { publicPalette } from '@/lib/design/tokens';
 
 export const alt = 'Location detail · DPG Tracker';
 export const size = { width: 1200, height: 630 };
@@ -22,11 +24,15 @@ export default async function LocationOgImage({
   params: { slug: string };
 }) {
   const { slug } = params;
-  const location = await getLocationBySlug(slug);
+  const [location, fonts] = await Promise.all([getLocationBySlug(slug), loadOgFonts()]);
+  const hasFonts = fonts.length > 0;
+  const headlineFont = hasFonts ? '"Newsreader"' : 'serif';
+  const labelFont = hasFonts ? '"Bricolage Grotesque"' : 'sans-serif';
+
   if (!location) {
     return new ImageResponse(
       <div style={fallbackStyle()}>Location not found</div>,
-      { ...size }
+      { ...size, fonts: hasFonts ? fonts : undefined }
     );
   }
 
@@ -35,7 +41,6 @@ export default async function LocationOgImage({
   const summary = await getLocationSummary(slug, year);
   const stats = [
     { label: 'Participants', value: summary.total_participants },
-    { label: 'Reach', value: summary.total_reach },
     { label: 'Activities', value: summary.activity_count },
     { label: 'Sub-projects', value: summary.sub_project_count },
   ];
@@ -48,10 +53,10 @@ export default async function LocationOgImage({
           height: '100%',
           display: 'flex',
           flexDirection: 'column',
-          background: 'linear-gradient(135deg, #0b3b5e 0%, #1CABE2 100%)',
-          color: 'white',
+          background: publicPalette.paper,
+          color: publicPalette.ink,
           padding: '64px 72px',
-          fontFamily: 'sans-serif',
+          fontFamily: labelFont,
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
@@ -59,9 +64,15 @@ export default async function LocationOgImage({
             <img
               src={location.logo_url}
               alt=""
-              width={64}
-              height={64}
-              style={{ borderRadius: 12, objectFit: 'cover' }}
+              width={56}
+              height={56}
+              style={{
+                borderRadius: 12,
+                objectFit: 'contain',
+                background: publicPalette.card,
+                padding: 4,
+                border: `1px solid ${publicPalette.border}`,
+              }}
             />
           ) : (
             <div
@@ -69,63 +80,116 @@ export default async function LocationOgImage({
                 width: 56,
                 height: 56,
                 borderRadius: 12,
-                background: 'white',
-                color: '#0b3b5e',
+                background: publicPalette.ink,
+                color: publicPalette.paper,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 fontSize: 32,
-                fontWeight: 800,
+                fontFamily: headlineFont,
               }}
             >
               D
             </div>
           )}
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <span style={{ fontSize: 20, opacity: 0.85, textTransform: 'uppercase', letterSpacing: 1 }}>
+            <span
+              style={{
+                fontSize: 14,
+                color: publicPalette.accent,
+                textTransform: 'uppercase',
+                letterSpacing: 2.5,
+                fontWeight: 600,
+              }}
+            >
               {TYPE_LABEL[location.type] ?? 'Venue'}
               {location.region ? ` · ${location.region}` : ''}
             </span>
-            <span style={{ fontSize: 16, opacity: 0.75 }}>DPG Tracker · {year}</span>
+            <span
+              style={{
+                fontSize: 15,
+                color: publicPalette.mutedForeground,
+              }}
+            >
+              DPG Tracker · {year}
+            </span>
           </div>
         </div>
 
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+        <div
+          style={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+          }}
+        >
           <h1
             style={{
-              fontSize: 72,
-              fontWeight: 700,
-              lineHeight: 1.05,
+              fontSize: 88,
+              fontWeight: 500,
+              lineHeight: 0.98,
               margin: 0,
-              letterSpacing: '-0.02em',
+              letterSpacing: '-0.025em',
+              fontFamily: headlineFont,
+              color: publicPalette.ink,
             }}
           >
-            {location.name}
+            {location.name}.
           </h1>
           {location.partner_type && (
-            <p style={{ fontSize: 22, marginTop: 16, opacity: 0.9 }}>
+            <p
+              style={{
+                fontSize: 22,
+                marginTop: 18,
+                color: publicPalette.foreground,
+                fontFamily: headlineFont,
+              }}
+            >
               {location.partner_type}
             </p>
           )}
         </div>
 
-        <div style={{ display: 'flex', gap: 18 }}>
+        <div
+          style={{
+            height: 2,
+            width: 80,
+            background: publicPalette.accent,
+            marginBottom: 20,
+          }}
+        />
+
+        <div style={{ display: 'flex', gap: 36 }}>
           {stats.map((s) => (
             <div
               key={s.label}
               style={{
                 display: 'flex',
                 flexDirection: 'column',
-                padding: '16px 20px',
-                borderRadius: 14,
-                background: 'rgba(255,255,255,0.12)',
-                minWidth: 160,
+                gap: 4,
+                minWidth: 200,
               }}
             >
-              <span style={{ fontSize: 13, opacity: 0.85, textTransform: 'uppercase', letterSpacing: 1 }}>
+              <span
+                style={{
+                  fontSize: 13,
+                  color: publicPalette.mutedForeground,
+                  textTransform: 'uppercase',
+                  letterSpacing: 2,
+                  fontWeight: 600,
+                }}
+              >
                 {s.label}
               </span>
-              <span style={{ fontSize: 36, fontWeight: 700, marginTop: 6 }}>
+              <span
+                style={{
+                  fontSize: 46,
+                  fontFamily: headlineFont,
+                  color: publicPalette.ink,
+                  lineHeight: 1,
+                }}
+              >
                 {s.value.toLocaleString()}
               </span>
             </div>
@@ -133,7 +197,7 @@ export default async function LocationOgImage({
         </div>
       </div>
     ),
-    { ...size }
+    { ...size, fonts: hasFonts ? fonts : undefined }
   );
 }
 
@@ -144,9 +208,9 @@ function fallbackStyle(): React.CSSProperties {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    background: '#0b3b5e',
-    color: 'white',
+    background: publicPalette.paper,
+    color: publicPalette.ink,
     fontSize: 48,
-    fontFamily: 'sans-serif',
+    fontFamily: 'serif',
   };
 }

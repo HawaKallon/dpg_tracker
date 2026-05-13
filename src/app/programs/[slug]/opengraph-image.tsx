@@ -4,6 +4,8 @@ import {
   getSubProjectSummary,
   getYears,
 } from '@/lib/supabase/queries';
+import { loadOgFonts } from '@/lib/og/fonts';
+import { publicPalette } from '@/lib/design/tokens';
 
 export const alt = 'Program detail · DPG Tracker';
 export const size = { width: 1200, height: 630 };
@@ -15,11 +17,15 @@ export default async function ProgramOgImage({
   params: { slug: string };
 }) {
   const { slug } = params;
-  const sp = await getSubProjectBySlug(slug);
+  const [sp, fonts] = await Promise.all([getSubProjectBySlug(slug), loadOgFonts()]);
+  const hasFonts = fonts.length > 0;
+  const headlineFont = hasFonts ? '"Newsreader"' : 'serif';
+  const labelFont = hasFonts ? '"Bricolage Grotesque"' : 'sans-serif';
+
   if (!sp) {
     return new ImageResponse(
       <div style={fallbackStyle()}>Program not found</div>,
-      { ...size }
+      { ...size, fonts: hasFonts ? fonts : undefined }
     );
   }
 
@@ -28,7 +34,6 @@ export default async function ProgramOgImage({
   const summary = await getSubProjectSummary(slug, year);
   const stats = [
     { label: 'Participants', value: summary.total_participants },
-    { label: 'Reach', value: summary.total_reach },
     { label: 'Activities', value: summary.activity_count },
     { label: 'Locations', value: summary.location_count },
   ];
@@ -41,22 +46,20 @@ export default async function ProgramOgImage({
           height: '100%',
           display: 'flex',
           flexDirection: 'column',
-          background: 'linear-gradient(135deg, #0b3b5e 0%, #1CABE2 100%)',
-          color: 'white',
+          background: publicPalette.paper,
+          color: publicPalette.ink,
           padding: '64px 72px',
-          fontFamily: 'sans-serif',
+          fontFamily: labelFont,
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <span
             style={{
               fontSize: 14,
-              opacity: 0.85,
+              color: publicPalette.accent,
               textTransform: 'uppercase',
-              letterSpacing: 2,
-              background: 'rgba(255,255,255,0.15)',
-              padding: '6px 12px',
-              borderRadius: 999,
+              letterSpacing: 2.5,
+              fontWeight: 600,
             }}
           >
             Program · {year}
@@ -73,51 +76,84 @@ export default async function ProgramOgImage({
         >
           <h1
             style={{
-              fontSize: 76,
-              fontWeight: 700,
-              lineHeight: 1.05,
+              fontSize: 88,
+              fontWeight: 500,
+              lineHeight: 0.98,
               margin: 0,
-              letterSpacing: '-0.02em',
+              letterSpacing: '-0.025em',
               maxWidth: 1000,
+              fontFamily: headlineFont,
+              color: publicPalette.ink,
             }}
           >
-            {sp.name}
+            {sp.name}.
           </h1>
           {sp.funder_name && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 18 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 22 }}>
               {sp.funder_logo_url && (
                 <img
                   src={sp.funder_logo_url}
                   alt=""
-                  width={48}
-                  height={48}
-                  style={{ borderRadius: 8, background: 'white', padding: 4, objectFit: 'contain' }}
+                  width={44}
+                  height={44}
+                  style={{
+                    borderRadius: 8,
+                    background: publicPalette.card,
+                    padding: 4,
+                    objectFit: 'contain',
+                    border: `1px solid ${publicPalette.border}`,
+                  }}
                 />
               )}
-              <span style={{ fontSize: 22, opacity: 0.9 }}>
-                Supported by <strong>{sp.funder_name}</strong>
+              <span style={{ fontSize: 22, color: publicPalette.foreground }}>
+                Supported by{' '}
+                <strong style={{ color: publicPalette.ink, fontWeight: 600 }}>
+                  {sp.funder_name}
+                </strong>
               </span>
             </div>
           )}
         </div>
 
-        <div style={{ display: 'flex', gap: 18 }}>
+        <div
+          style={{
+            height: 2,
+            width: 80,
+            background: publicPalette.accent,
+            marginBottom: 20,
+          }}
+        />
+
+        <div style={{ display: 'flex', gap: 36 }}>
           {stats.map((s) => (
             <div
               key={s.label}
               style={{
                 display: 'flex',
                 flexDirection: 'column',
-                padding: '16px 20px',
-                borderRadius: 14,
-                background: 'rgba(255,255,255,0.12)',
-                minWidth: 160,
+                gap: 4,
+                minWidth: 200,
               }}
             >
-              <span style={{ fontSize: 13, opacity: 0.85, textTransform: 'uppercase', letterSpacing: 1 }}>
+              <span
+                style={{
+                  fontSize: 13,
+                  color: publicPalette.mutedForeground,
+                  textTransform: 'uppercase',
+                  letterSpacing: 2,
+                  fontWeight: 600,
+                }}
+              >
                 {s.label}
               </span>
-              <span style={{ fontSize: 36, fontWeight: 700, marginTop: 6 }}>
+              <span
+                style={{
+                  fontSize: 46,
+                  fontFamily: headlineFont,
+                  color: publicPalette.ink,
+                  lineHeight: 1,
+                }}
+              >
                 {s.value.toLocaleString()}
               </span>
             </div>
@@ -125,7 +161,7 @@ export default async function ProgramOgImage({
         </div>
       </div>
     ),
-    { ...size }
+    { ...size, fonts: hasFonts ? fonts : undefined }
   );
 }
 
@@ -136,9 +172,9 @@ function fallbackStyle(): React.CSSProperties {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    background: '#0b3b5e',
-    color: 'white',
+    background: publicPalette.paper,
+    color: publicPalette.ink,
     fontSize: 48,
-    fontFamily: 'sans-serif',
+    fontFamily: 'serif',
   };
 }

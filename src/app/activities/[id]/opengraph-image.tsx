@@ -1,5 +1,7 @@
 import { ImageResponse } from 'next/og';
 import { getActivityById } from '@/lib/supabase/queries';
+import { loadOgFonts } from '@/lib/og/fonts';
+import { publicPalette } from '@/lib/design/tokens';
 
 export const alt = 'Activity · DPG Tracker';
 export const size = { width: 1200, height: 630 };
@@ -18,11 +20,15 @@ export default async function ActivityOgImage({
   params: { id: string };
 }) {
   const { id } = params;
-  const activity = await getActivityById(id);
+  const [activity, fonts] = await Promise.all([getActivityById(id), loadOgFonts()]);
+  const hasFonts = fonts.length > 0;
+  const headlineFont = hasFonts ? '"Newsreader"' : 'serif';
+  const labelFont = hasFonts ? '"Bricolage Grotesque"' : 'sans-serif';
+
   if (!activity) {
     return new ImageResponse(
       <div style={fallbackStyle()}>Activity not found</div>,
-      { ...size }
+      { ...size, fonts: hasFonts ? fonts : undefined }
     );
   }
 
@@ -31,7 +37,8 @@ export default async function ActivityOgImage({
     activity.category?.name ??
     activity.sub_project?.name ??
     'Activity';
-  const total = activity.total_count ?? (activity.male_count ?? 0) + (activity.female_count ?? 0);
+  const total =
+    activity.total_count ?? (activity.male_count ?? 0) + (activity.female_count ?? 0);
   const hero = activity.media_urls[0];
 
   return new ImageResponse(
@@ -41,9 +48,9 @@ export default async function ActivityOgImage({
           width: '100%',
           height: '100%',
           display: 'flex',
-          background: '#0b3b5e',
-          color: 'white',
-          fontFamily: 'sans-serif',
+          background: publicPalette.paper,
+          color: publicPalette.ink,
+          fontFamily: labelFont,
           position: 'relative',
         }}
       >
@@ -60,15 +67,14 @@ export default async function ActivityOgImage({
                 width: '100%',
                 height: '100%',
                 objectFit: 'cover',
-                opacity: 0.55,
+                opacity: 0.35,
               }}
             />
             <div
               style={{
                 position: 'absolute',
                 inset: 0,
-                background:
-                  'linear-gradient(135deg, rgba(11,59,94,0.92) 0%, rgba(11,59,94,0.6) 60%, rgba(11,59,94,0.95) 100%)',
+                background: `linear-gradient(110deg, ${publicPalette.paper} 0%, rgba(244,239,229,0.94) 45%, rgba(244,239,229,0.7) 100%)`,
               }}
             />
           </>
@@ -85,9 +91,10 @@ export default async function ActivityOgImage({
           <span
             style={{
               fontSize: 14,
-              opacity: 0.85,
+              color: publicPalette.accent,
               textTransform: 'uppercase',
-              letterSpacing: 2,
+              letterSpacing: 2.5,
+              fontWeight: 600,
             }}
           >
             {activity.sub_project?.name ?? 'Activity'} · {activity.event_year}
@@ -102,34 +109,71 @@ export default async function ActivityOgImage({
           >
             <h1
               style={{
-                fontSize: 64,
-                fontWeight: 700,
-                lineHeight: 1.05,
+                fontSize: 80,
+                fontWeight: 500,
+                lineHeight: 0.98,
                 margin: 0,
-                letterSpacing: '-0.02em',
+                letterSpacing: '-0.025em',
                 maxWidth: 1000,
+                fontFamily: headlineFont,
+                color: publicPalette.ink,
               }}
             >
               {title}
             </h1>
-            <p style={{ fontSize: 22, marginTop: 16, opacity: 0.9 }}>
-              {[activity.location?.name, formatDate(activity.activity_date, activity.month_label)]
+            <p
+              style={{
+                fontSize: 22,
+                marginTop: 18,
+                color: publicPalette.mutedForeground,
+                fontFamily: headlineFont,
+              }}
+            >
+              {[
+                activity.location?.name,
+                formatDate(activity.activity_date, activity.month_label),
+              ]
                 .filter(Boolean)
                 .join(' · ')}
             </p>
           </div>
+          <div
+            style={{
+              height: 2,
+              width: 80,
+              background: publicPalette.accent,
+              marginBottom: 18,
+            }}
+          />
           {total > 0 && (
             <div style={{ display: 'flex', gap: 16, alignItems: 'baseline' }}>
-              <span style={{ fontSize: 60, fontWeight: 800 }}>
+              <span
+                style={{
+                  fontSize: 78,
+                  fontFamily: headlineFont,
+                  color: publicPalette.ink,
+                  lineHeight: 1,
+                }}
+              >
                 {total.toLocaleString()}
               </span>
-              <span style={{ fontSize: 22, opacity: 0.85 }}>participants</span>
+              <span
+                style={{
+                  fontSize: 20,
+                  color: publicPalette.mutedForeground,
+                  textTransform: 'uppercase',
+                  letterSpacing: 2,
+                  fontWeight: 600,
+                }}
+              >
+                participants
+              </span>
             </div>
           )}
         </div>
       </div>
     ),
-    { ...size }
+    { ...size, fonts: hasFonts ? fonts : undefined }
   );
 }
 
@@ -140,9 +184,9 @@ function fallbackStyle(): React.CSSProperties {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    background: '#0b3b5e',
-    color: 'white',
+    background: publicPalette.paper,
+    color: publicPalette.ink,
     fontSize: 48,
-    fontFamily: 'sans-serif',
+    fontFamily: 'serif',
   };
 }
