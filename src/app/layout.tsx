@@ -1,13 +1,9 @@
 import type { Metadata } from 'next';
-import { Bricolage_Grotesque, Newsreader } from 'next/font/google';
+import { Geist, Geist_Mono, Newsreader } from 'next/font/google';
 import './globals.css';
 
-const bricolage = Bricolage_Grotesque({
-  variable: '--font-bricolage',
-  subsets: ['latin'],
-  display: 'swap',
-});
-
+const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] });
+const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin'] });
 const newsreader = Newsreader({
   variable: '--font-newsreader',
   subsets: ['latin'],
@@ -18,7 +14,7 @@ const newsreader = Newsreader({
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://dpg.local';
 const siteName = 'DPG Tracker';
 const siteDescription =
-  'A live tracker of Sierra Leone’s Digital Public Goods program — every workshop, every campus, every line of open code shipped, counted as it happens.';
+  "A live tracker of Sierra Leone’s Digital Public Goods program — every workshop, every campus, every line of open code shipped, counted as it happens.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -63,17 +59,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html
       lang="en"
-      className={`${bricolage.variable} ${newsreader.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${newsreader.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col font-sans overflow-x-clip">
-        <a
-          href="#main-content"
-          className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:bg-ink focus:text-primary-foreground focus:px-3 focus:py-2 focus:text-sm focus:font-medium"
-        >
-          Skip to main content
-        </a>
-        {children}
-      </body>
+      <body className="min-h-full flex flex-col font-sans">{children}</body>
     </html>
   );
 }
