@@ -65,7 +65,7 @@ export function FilterBar({
   );
 
   const selectClass =
-    'h-9 rounded-full bg-background border-border text-sm pl-3.5 pr-9';
+    'h-9 w-auto rounded-full bg-background border-border text-sm pl-3.5 pr-9';
 
   return (
     <div className="flex flex-wrap items-center gap-2.5">
