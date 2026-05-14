@@ -140,8 +140,8 @@ export async function getByLocation(year?: number | null): Promise<LocationBreak
 export type ActivityFilters = {
   sub_project_id?: string | null;
   location_id?: string | null;
-  date_from?: string | null;
-  date_to?: string | null;
+  month?: number | null;     // 1–12; combined with the page-level year
+  q?: string | null;         // free-text search on notes
   partner?: string | null;
 };
 
@@ -166,8 +166,17 @@ export async function getRecentActivities(
   if (year) q = q.eq('event_year', year);
   if (filters.sub_project_id) q = q.eq('sub_project_id', filters.sub_project_id);
   if (filters.location_id) q = q.eq('location_id', filters.location_id);
-  if (filters.date_from) q = q.gte('activity_date', filters.date_from);
-  if (filters.date_to) q = q.lte('activity_date', filters.date_to);
+  if (filters.month && filters.month >= 1 && filters.month <= 12 && year) {
+    const mm = String(filters.month).padStart(2, '0');
+    const lastDay = new Date(year, filters.month, 0).getDate();
+    q = q
+      .gte('activity_date', `${year}-${mm}-01`)
+      .lte('activity_date', `${year}-${mm}-${String(lastDay).padStart(2, '0')}`);
+  }
+  if (filters.q && filters.q.trim()) {
+    const term = filters.q.trim().replace(/[%_]/g, '\\$&');
+    q = q.ilike('notes', `%${term}%`);
+  }
   if (filters.partner) q = q.contains('partner_orgs', [filters.partner]);
   const { data, error } = await q
     .order('activity_date', { ascending: false, nullsFirst: false })

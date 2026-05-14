@@ -42,14 +42,14 @@ type SearchParams = Promise<{
   year?: string;
   sub_project?: string;
   location?: string;
-  date_from?: string;
-  date_to?: string;
+  month?: string;
+  q?: string;
   partner?: string;
 }>;
 
 export default function HomePage(props: { searchParams: SearchParams }) {
   return (
-    <SiteShell>
+    <SiteShell showBackground>
       <Suspense fallback={<PageSkeleton />}>
         <HomeContent {...props} />
       </Suspense>
@@ -63,11 +63,12 @@ async function HomeContent({ searchParams }: { searchParams: SearchParams }) {
   const requested = sp.year ? Number(sp.year) : null;
   const currentYear = requested && years.includes(requested) ? requested : years[0];
 
+  const monthNum = sp.month ? Number(sp.month) : null;
   const filters = {
     sub_project_id: sp.sub_project || null,
     location_id: sp.location || null,
-    date_from: sp.date_from || null,
-    date_to: sp.date_to || null,
+    month: monthNum && monthNum >= 1 && monthNum <= 12 ? monthNum : null,
+    q: sp.q || null,
     partner: sp.partner || null,
   };
 
@@ -98,8 +99,8 @@ async function HomeContent({ searchParams }: { searchParams: SearchParams }) {
   const filtersActive = Boolean(
     filters.sub_project_id ||
       filters.location_id ||
-      filters.date_from ||
-      filters.date_to ||
+      filters.month ||
+      filters.q ||
       filters.partner
   );
 
@@ -501,8 +502,8 @@ async function HomeContent({ searchParams }: { searchParams: SearchParams }) {
               current={{
                 sub_project: sp.sub_project,
                 location: sp.location,
-                date_from: sp.date_from,
-                date_to: sp.date_to,
+                month: sp.month,
+                q: sp.q,
                 partner: sp.partner,
               }}
             />
@@ -541,7 +542,7 @@ function CardCollage({
         label={`Participants · ${currentYear}`}
         value={participants}
         delta={participantsDelta}
-        className="col-span-12 sm:col-span-7 lg:col-span-12 xl:col-span-7 bg-gradient-to-br from-ink to-[#0a0a0a] text-primary-foreground border-ink shadow-anchor hover:!shadow-anchor hover:!translate-y-0 [&_*]:!text-primary-foreground"
+        className="col-span-12 sm:col-span-7 lg:col-span-12 xl:col-span-7 bg-gradient-to-br from-primary to-primary-deep text-primary-foreground border-primary-deep shadow-anchor hover:!shadow-anchor hover:!translate-y-0 [&_*]:!text-primary-foreground"
       />
 
       <div className="col-span-12 sm:col-span-5 lg:col-span-12 xl:col-span-5 relative rounded-2xl border border-border bg-card p-5 sm:p-6 flex flex-col gap-3 justify-between shadow-card overflow-hidden">

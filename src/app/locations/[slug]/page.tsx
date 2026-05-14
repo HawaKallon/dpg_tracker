@@ -10,6 +10,7 @@ import { StatTile } from '@/components/public/stat-tile';
 import { Reveal } from '@/components/public/reveal';
 import { MonthlyLine } from '@/components/charts/monthly-line';
 import { SubProjectDonut } from '@/components/charts/sub-project-donut';
+import { CampusMap } from '@/components/map/campus-map';
 import { ActivityFeed } from '@/components/activity-feed';
 import { RichText } from '@/components/editor/rich-text';
 import { YearPicker } from '@/components/year-picker';
@@ -246,6 +247,29 @@ async function LocationDetailContent({
         </div>
       </section>
       </Reveal>
+
+      {/* Campus map ------------------------------------------------ */}
+      {location.lat != null && location.lng != null && (
+        <Reveal delay={0.05}>
+          <section aria-labelledby="campus-map-heading" className="space-y-4">
+            <header>
+              <SectionEyebrow tone="muted">Where</SectionEyebrow>
+              <h2
+                id="campus-map-heading"
+                className="font-serif text-2xl text-ink mt-2 leading-tight"
+              >
+                Campus location
+              </h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                {location.region
+                  ? `${location.name} — ${location.region}.`
+                  : `${location.name}.`}
+              </p>
+            </header>
+            <CampusMap lat={location.lat} lng={location.lng} name={location.name} />
+          </section>
+        </Reveal>
+      )}
 
       {/* Recent activities ----------------------------------------- */}
       <Reveal delay={0.05}>

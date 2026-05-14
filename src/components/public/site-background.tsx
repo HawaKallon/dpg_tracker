@@ -5,8 +5,8 @@ import { useReducedMotion } from '@/lib/hooks/use-reduced-motion';
 
 /**
  * Atmospheric WebGL background for the public shell.
- * Tuned for the cream + ink + terracotta palette so it reads as warm paper,
- * not chrome. Pauses when offscreen / tab hidden (handled by Grainient itself).
+ * Tuned for the UNICEF blue + white palette — soft sky tint, pale blue,
+ * UNICEF Blue accent. Pauses when offscreen / tab hidden (handled by Grainient).
  * Respects prefers-reduced-motion by freezing the time uniform.
  */
 export function SiteBackground() {
@@ -15,7 +15,7 @@ export function SiteBackground() {
   return (
     <div
       aria-hidden
-      className="pointer-events-none fixed inset-0 -z-10 opacity-[0.55] print:hidden"
+      className="pointer-events-none fixed inset-0 -z-10 opacity-[0.45] print:hidden"
     >
       <Grainient
         timeSpeed={reducedMotion ? 0 : 0.18}
@@ -35,9 +35,9 @@ export function SiteBackground() {
         gamma={1.02}
         saturation={0.85}
         zoom={1.1}
-        color1="#F4EFE5"
-        color2="#E8DCC7"
-        color3="#C8553D"
+        color1="#FFFFFF"
+        color2="#E6F4FB"
+        color3="#1CABE2"
       />
     </div>
   );

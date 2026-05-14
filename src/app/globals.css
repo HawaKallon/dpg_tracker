@@ -18,12 +18,12 @@
   --sidebar-accent: #f1f1f2;
   --primary: #1CABE2;
   --primary-foreground: #ffffff;
-  --primary-deep: #0073b8;
-  --accent: #18181b;
+  --primary-deep: #0058AB;
+  --accent: #0058AB;
   --accent-foreground: #ffffff;
-  --accent-deep: #000000;
+  --accent-deep: #003F7D;
   --ink: #18181b;
-  --signal: #2F5D62;
+  --signal: #1CABE2;
   --destructive: #c2410c;
   --success: #047857;
   --pink: #ec4899;
@@ -36,42 +36,41 @@
  * Editorial cream + ink with one warm terracotta accent.
  * ----------------------------------------------------------------- */
 [data-shell="public"] {
-  --background: #EDE7DA;   /* outer gutter cream */
-  --paper:      #F4EFE5;   /* container surface */
-  --card:       #FAF7EF;   /* lifted card surface */
-  --foreground: #1F1B17;   /* warm near-black for body */
-  --muted:      #E3DCC9;
-  --muted-foreground: #6E6354;
-  --border:     #D9CFC0;
-  --ink:        #1A1A1A;   /* hard ink for anchors */
-  --primary:    #1A1A1A;   /* primary anchor = ink, not cyan */
-  --primary-foreground: #FAF7EF;
-  --primary-deep: #000000;
-  --accent:     #C8553D;   /* terracotta — sparing */
-  --accent-foreground: #FAF7EF;
-  --accent-deep: #9E3E2A;
-  --signal:     #2F5D62;   /* deep teal — male series + secondary chart */
-  --pink:       #C8553D;   /* female chart bar lands on terracotta */
-  --destructive:#9E3E2A;
-  --success:    #5C7F4F;
+  --background: #F4F8FB;   /* soft blue tint outer gutter */
+  --paper:      #FFFFFF;   /* container surface */
+  --card:       #FFFFFF;   /* lifted card surface */
+  --foreground: #0F1A2B;   /* slate ink for body */
+  --muted:      #E6F4FB;   /* pale blue */
+  --muted-foreground: #5A6A82;
+  --border:     #D6E1EC;
+  --ink:        #0F1A2B;   /* anchor ink */
+  --primary:    #1CABE2;   /* UNICEF Blue */
+  --primary-foreground: #FFFFFF;
+  --primary-deep: #0058AB;  /* UNICEF Dark Blue */
+  --accent:     #0058AB;   /* dark blue replaces terracotta */
+  --accent-foreground: #FFFFFF;
+  --accent-deep: #003F7D;
+  --signal:     #1CABE2;
+  --pink:       #FFC20E;   /* female chart bar → UNICEF Yellow (token kept for compatibility) */
+  --destructive:#E2231A;
+  --success:    #80BD41;
 
-  /* Warm-toned shadow ladder. Tinted with the same brown used for ink, never
-     neutral gray — keeps the surfaces feeling like paper, not glass. */
-  --shadow-sm: 0 1px 2px rgba(31, 27, 23, 0.05);
+  /* Cool-toned shadow ladder — tinted with dark blue, not warm brown. */
+  --shadow-sm: 0 1px 2px rgba(15, 26, 43, 0.05);
   --shadow-card:
-    0 1px 0 rgba(255, 252, 245, 0.7) inset,
-    0 1px 2px rgba(31, 27, 23, 0.04),
-    0 12px 24px -16px rgba(31, 27, 23, 0.18);
+    0 1px 0 rgba(255, 255, 255, 0.7) inset,
+    0 1px 2px rgba(15, 26, 43, 0.04),
+    0 12px 24px -16px rgba(15, 26, 43, 0.18);
   --shadow-lift:
-    0 1px 0 rgba(255, 252, 245, 0.7) inset,
-    0 4px 8px -2px rgba(31, 27, 23, 0.06),
-    0 24px 40px -20px rgba(31, 27, 23, 0.22);
+    0 1px 0 rgba(255, 255, 255, 0.7) inset,
+    0 4px 8px -2px rgba(15, 26, 43, 0.06),
+    0 24px 40px -20px rgba(15, 26, 43, 0.22);
   --shadow-anchor:
-    0 1px 0 rgba(255, 252, 245, 0.06) inset,
-    0 8px 24px -8px rgba(26, 26, 26, 0.45);
+    0 1px 0 rgba(255, 255, 255, 0.06) inset,
+    0 8px 24px -8px rgba(0, 88, 171, 0.45);
   --shadow-terracotta:
-    0 1px 0 rgba(255, 252, 245, 0.7) inset,
-    0 18px 40px -24px rgba(200, 85, 61, 0.55);
+    0 1px 0 rgba(255, 255, 255, 0.7) inset,
+    0 18px 40px -24px rgba(28, 171, 226, 0.55);
 }
 
 @theme inline {

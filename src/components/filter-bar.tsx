@@ -2,14 +2,19 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTransition } from 'react';
-import { Filter, X } from 'lucide-react';
+import { Filter, Search, X } from 'lucide-react';
 import { Select } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
 type Option = { id: string; name: string };
 
-type FilterKey = 'sub_project' | 'location' | 'date_from' | 'date_to' | 'partner';
+type FilterKey = 'sub_project' | 'location' | 'month' | 'q' | 'partner';
+
+const MONTHS = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
 
 export function FilterBar({
   subProjects,
@@ -23,8 +28,8 @@ export function FilterBar({
   current: {
     sub_project?: string;
     location?: string;
-    date_from?: string;
-    date_to?: string;
+    month?: string;
+    q?: string;
     partner?: string;
   };
 }) {
@@ -43,8 +48,8 @@ export function FilterBar({
 
   function clearAll() {
     const next = new URLSearchParams(params.toString());
-    (['sub_project', 'location', 'date_from', 'date_to', 'partner'] satisfies FilterKey[]).forEach(
-      (k) => next.delete(k)
+    (['sub_project', 'location', 'month', 'q', 'partner'] satisfies FilterKey[]).forEach(
+      (k) => next.delete(k),
     );
     startTransition(() => {
       router.push(`?${next.toString()}`, { scroll: false });
@@ -54,15 +59,13 @@ export function FilterBar({
   const hasActive = Boolean(
     current.sub_project ||
       current.location ||
-      current.date_from ||
-      current.date_to ||
-      current.partner
+      current.month ||
+      current.q ||
+      current.partner,
   );
 
   const selectClass =
     'h-9 rounded-full bg-background border-border text-sm pl-3.5 pr-9';
-  const dateClass =
-    'h-9 rounded-full bg-background border-border text-sm w-[10.5rem]';
 
   return (
     <div className="flex flex-wrap items-center gap-2.5">
@@ -99,21 +102,34 @@ export function FilterBar({
         ))}
       </Select>
 
-      <Input
-        type="date"
-        value={current.date_from ?? ''}
-        onChange={(e) => setParam('date_from', e.target.value)}
-        aria-label="Filter from date"
-        className={dateClass}
-      />
+      <Select
+        value={current.month ?? ''}
+        onChange={(e) => setParam('month', e.target.value)}
+        aria-label="Filter by month"
+        className={selectClass}
+      >
+        <option value="">All months</option>
+        {MONTHS.map((m, i) => (
+          <option key={m} value={String(i + 1)}>
+            {m}
+          </option>
+        ))}
+      </Select>
 
-      <Input
-        type="date"
-        value={current.date_to ?? ''}
-        onChange={(e) => setParam('date_to', e.target.value)}
-        aria-label="Filter to date"
-        className={dateClass}
-      />
+      <div className="relative">
+        <Search
+          className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground"
+          aria-hidden="true"
+        />
+        <Input
+          type="search"
+          value={current.q ?? ''}
+          onChange={(e) => setParam('q', e.target.value)}
+          placeholder="Search notes"
+          aria-label="Search activities"
+          className="h-9 rounded-full bg-background border-border text-sm w-[12rem] pl-8"
+        />
+      </div>
 
       {partners && partners.length > 0 && (
         <Select

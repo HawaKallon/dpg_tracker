@@ -8,46 +8,46 @@
  */
 
 export const publicChartColors = {
-  female: '#C8553D', // terracotta
-  male: '#2F5D62',   // deep teal
+  female: '#1CABE2', // UNICEF Blue
+  male: '#0058AB',   // UNICEF Dark Blue
   series: [
-    '#C8553D', // terracotta
-    '#2F5D62', // deep teal
-    '#A87D34', // ochre
-    '#5C7F4F', // moss
-    '#7A4E3A', // burnt sienna
-    '#4B5A6D', // slate
-    '#9E3E2A', // deep terracotta
-    '#3F4B5A', // cool ink
+    '#1CABE2', // UNICEF Blue
+    '#0058AB', // UNICEF Dark Blue
+    '#FFC20E', // UNICEF Yellow
+    '#80BD41', // UNICEF Green
+    '#6FC8E8', // light blue
+    '#003F7D', // deeper blue
+    '#5A6A82', // slate muted
+    '#0F1A2B', // slate ink
   ],
-  axis: '#6E6354',
-  grid: '#D9CFC0',
-  tooltipBg: '#FAF7EF',
-  tooltipBorder: '#D9CFC0',
+  axis: '#5A6A82',
+  grid: '#D6E1EC',
+  tooltipBg: '#FFFFFF',
+  tooltipBorder: '#D6E1EC',
 } as const;
 
 export const publicMapColors = {
-  marker: '#C8553D',
-  markerStroke: '#FAF7EF',
-  highlight: '#9E3E2A',
+  marker: '#1CABE2',
+  markerStroke: '#FFFFFF',
+  highlight: '#0058AB',
   legend: {
-    university: '#2F5D62',
-    hub: '#C8553D',
-    online: '#A87D34',
-    other: '#6E6354',
+    university: '#0058AB',
+    hub: '#1CABE2',
+    online: '#FFC20E',
+    other: '#5A6A82',
   } as Record<string, string>,
 } as const;
 
 export const publicPalette = {
-  bg: '#EDE7DA',
-  paper: '#F4EFE5',
-  card: '#FAF7EF',
-  ink: '#1A1A1A',
-  foreground: '#1F1B17',
-  muted: '#E3DCC9',
-  mutedForeground: '#6E6354',
-  border: '#D9CFC0',
-  accent: '#C8553D',
-  accentDeep: '#9E3E2A',
-  signal: '#2F5D62',
+  bg: '#F4F8FB',
+  paper: '#FFFFFF',
+  card: '#FFFFFF',
+  ink: '#0F1A2B',
+  foreground: '#0F1A2B',
+  muted: '#E6F4FB',
+  mutedForeground: '#5A6A82',
+  border: '#D6E1EC',
+  accent: '#0058AB',
+  accentDeep: '#003F7D',
+  signal: '#1CABE2',
 } as const;
