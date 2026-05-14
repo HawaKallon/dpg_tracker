@@ -4,7 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { ArrowLeft, ArrowUpRight, ExternalLink, MapPin, GraduationCap, Users } from 'lucide-react';
-import { SiteShell } from '@/components/public/site-shell';
+import { SiteHeader } from '@/components/site-header';
 import { SectionEyebrow } from '@/components/public/section-eyebrow';
 import { StatTile } from '@/components/public/stat-tile';
 import { Reveal } from '@/components/public/reveal';
@@ -70,11 +70,12 @@ export default function LocationDetailPage(props: {
   searchParams: SearchParams;
 }) {
   return (
-    <SiteShell>
+    <>
+      <SiteHeader />
       <Suspense fallback={<PageSkeleton />}>
         <LocationDetailContent {...props} />
       </Suspense>
-    </SiteShell>
+    </>
   );
 }
 
@@ -113,7 +114,7 @@ async function LocationDetailContent({
   const typeLabel = TYPE_LABEL[location.type] ?? 'Venue';
 
   const gallery = recent
-    .flatMap((a) => a.media_urls.map((url) => ({ url, activityId: a.id })))
+    .flatMap((a) => (a.media_urls ?? []).map((url) => ({ url, activityId: a.id })))
     .slice(0, 9);
 
   return (

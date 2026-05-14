@@ -1,12 +1,10 @@
 import { Suspense } from 'react';
 import type { Metadata } from 'next';
-import Link from 'next/link';
-import { SiteShell } from '@/components/public/site-shell';
+import { SiteHeader } from '@/components/site-header';
 import { SectionEyebrow } from '@/components/public/section-eyebrow';
 import { Reveal } from '@/components/public/reveal';
 import { YearPicker } from '@/components/year-picker';
 import { LocationsMap } from '@/components/map/locations-map';
-import { Button } from '@/components/ui/button';
 import { PageSkeleton } from '@/components/page-skeleton';
 import { getLocationsWithCoords, getYears } from '@/lib/supabase/queries';
 import { publicMapColors } from '@/lib/design/tokens';
@@ -28,11 +26,12 @@ const LEGEND: Array<{ label: string; color: string }> = [
 
 export default function MapPage(props: { searchParams: SearchParams }) {
   return (
-    <SiteShell>
+    <>
+      <SiteHeader />
       <Suspense fallback={<PageSkeleton />}>
         <MapContent {...props} />
       </Suspense>
-    </SiteShell>
+    </>
   );
 }
 
@@ -67,11 +66,6 @@ async function MapContent({ searchParams }: { searchParams: SearchParams }) {
           <p className="text-sm text-muted-foreground">
             None of the locations in the database have latitude / longitude set. Add coordinates in the admin to populate the map.
           </p>
-          <Link href="/admin/locations">
-            <Button variant="primary" size="md" className="rounded-full">
-              Open Locations admin
-            </Button>
-          </Link>
         </div>
       ) : (
         <>

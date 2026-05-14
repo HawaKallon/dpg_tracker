@@ -4,7 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { ArrowLeft, ArrowUpRight } from 'lucide-react';
-import { SiteShell } from '@/components/public/site-shell';
+import { SiteHeader } from '@/components/site-header';
 import { SectionEyebrow } from '@/components/public/section-eyebrow';
 import { StatTile } from '@/components/public/stat-tile';
 import { Reveal } from '@/components/public/reveal';
@@ -50,11 +50,12 @@ export default function SubProjectDetailPage(props: {
   searchParams: SearchParams;
 }) {
   return (
-    <SiteShell>
+    <>
+      <SiteHeader />
       <Suspense fallback={<PageSkeleton />}>
         <SubProjectDetailContent {...props} />
       </Suspense>
-    </SiteShell>
+    </>
   );
 }
 

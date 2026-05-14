@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
 import type { Metadata } from 'next';
-import { SiteShell } from '@/components/public/site-shell';
+import { SiteHeader } from '@/components/site-header';
 import { SectionEyebrow } from '@/components/public/section-eyebrow';
 import { StatTile } from '@/components/public/stat-tile';
 import { Reveal } from '@/components/public/reveal';
@@ -19,11 +19,12 @@ type SearchParams = Promise<{ year?: string }>;
 
 export default function PartnersPage(props: { searchParams: SearchParams }) {
   return (
-    <SiteShell>
+    <>
+      <SiteHeader />
       <Suspense fallback={<PageSkeleton />}>
         <PartnersContent {...props} />
       </Suspense>
-    </SiteShell>
+    </>
   );
 }
 

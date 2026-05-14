@@ -2,7 +2,7 @@ import { Suspense } from 'react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { SiteShell } from '@/components/public/site-shell';
+import { SiteHeader } from '@/components/site-header';
 import { SectionEyebrow } from '@/components/public/section-eyebrow';
 import { Reveal } from '@/components/public/reveal';
 import { YoyKpiRow } from '@/components/report/yoy-kpi-row';
@@ -31,11 +31,12 @@ const TOP_LIMIT = 5;
 
 export default function ReportPage(props: { params: Params }) {
   return (
-    <SiteShell>
+    <>
+      <SiteHeader />
       <Suspense fallback={<PageSkeleton />}>
         <ReportContent {...props} />
       </Suspense>
-    </SiteShell>
+    </>
   );
 }
 

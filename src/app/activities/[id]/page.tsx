@@ -10,7 +10,7 @@ import {
   MapPin,
   TrendingUp,
 } from 'lucide-react';
-import { SiteShell } from '@/components/public/site-shell';
+import { SiteHeader } from '@/components/site-header';
 import { SectionEyebrow } from '@/components/public/section-eyebrow';
 import { StatTile } from '@/components/public/stat-tile';
 import { PullQuote } from '@/components/public/pull-quote';
@@ -57,11 +57,12 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 
 export default function ActivityDetailPage(props: { params: Params }) {
   return (
-    <SiteShell>
+    <>
+      <SiteHeader />
       <Suspense fallback={<PageSkeleton />}>
         <ActivityDetailContent {...props} />
       </Suspense>
-    </SiteShell>
+    </>
   );
 }
 
