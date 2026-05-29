@@ -23,7 +23,7 @@ returns boolean language sql stable security definer set search_path = public as
   );
 $$;
 
--- Honor profile_role from invite metadata; default new signups to viewer.
+
 create or replace function public.handle_new_user()
 returns trigger language plpgsql security definer set search_path = public as $$
 declare
