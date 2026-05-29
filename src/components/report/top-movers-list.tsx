@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { ArrowDownRight, ArrowUpRight, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
-import type { TopMoverRow } from '@/lib/supabase/queries';
+import type { TopMoverRow } from '@/lib/supabase/query-types';
 
 export function TopMoversList({
   title,

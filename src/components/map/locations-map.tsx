@@ -1,7 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import type { LocationMapPoint } from '@/lib/supabase/queries';
+import type { LocationMapPoint } from '@/lib/supabase/query-types';
 
 const Inner = dynamic(() => import('./locations-map-inner'), {
   ssr: false,

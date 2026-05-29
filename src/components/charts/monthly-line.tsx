@@ -1,7 +1,7 @@
 'use client';
 
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import type { MonthlyPoint } from '@/lib/supabase/queries';
+import type { MonthlyPoint } from '@/lib/supabase/query-types';
 import { publicChartColors } from '@/lib/design/tokens';
 
 export function MonthlyLine({ data }: { data: MonthlyPoint[] }) {

@@ -2,7 +2,7 @@
 
 import 'leaflet/dist/leaflet.css';
 import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet';
-import type { LocationMapPoint } from '@/lib/supabase/queries';
+import type { LocationMapPoint } from '@/lib/supabase/query-types';
 import { publicMapColors } from '@/lib/design/tokens';
 
 const SIERRA_LEONE_CENTER: [number, number] = [8.4606, -11.7799];

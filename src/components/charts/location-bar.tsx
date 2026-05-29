@@ -1,7 +1,7 @@
 'use client';
 
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import type { LocationBreakdown } from '@/lib/supabase/queries';
+import type { LocationBreakdown } from '@/lib/supabase/query-types';
 
 export function LocationBar({ data }: { data: LocationBreakdown[] }) {
   const rows = [...data].reverse();

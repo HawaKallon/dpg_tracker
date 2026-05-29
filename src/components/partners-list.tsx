@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
-import type { PartnerSummaryRow } from '@/lib/supabase/queries';
+import type { PartnerSummaryRow } from '@/lib/supabase/query-types';
 
 export function PartnersList({
   partners,

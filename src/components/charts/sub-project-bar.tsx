@@ -1,7 +1,7 @@
 'use client';
 
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import type { SubProjectBreakdown } from '@/lib/supabase/queries';
+import type { SubProjectBreakdown } from '@/lib/supabase/query-types';
 import { publicChartColors } from '@/lib/design/tokens';
 
 export function SubProjectBar({ data }: { data: SubProjectBreakdown[] }) {

@@ -1,5 +1,32 @@
+import 'server-only';
+
 import { cacheLife, cacheTag } from 'next/cache';
 import { createClient, createPublicClient } from '@/lib/supabase/server';
+import type {
+  ActivityFilters,
+  LocationBreakdown,
+  LocationMapPoint,
+  LocationSummary,
+  MixSlice,
+  MonthlyPoint,
+  PartnerSummaryRow,
+  SubProjectBreakdown,
+  SubProjectSummary,
+  TopMoverRow,
+} from '@/lib/supabase/query-types';
+
+export type {
+  ActivityFilters,
+  LocationBreakdown,
+  LocationMapPoint,
+  LocationSummary,
+  MixSlice,
+  MonthlyPoint,
+  PartnerSummaryRow,
+  SubProjectBreakdown,
+  SubProjectSummary,
+  TopMoverRow,
+} from '@/lib/supabase/query-types';
 import type {
   ActivityWithRelations,
   DashboardSummary,
@@ -83,17 +110,6 @@ export async function getDashboardSummaryCompare(
   return data as DashboardSummaryCompare;
 }
 
-export type SubProjectBreakdown = {
-  id: string;
-  name: string;
-  slug: string;
-  display_order: number;
-  total_participants: number;
-  male: number;
-  female: number;
-  activity_count: number;
-};
-
 export async function getBySubProject(year?: number | null): Promise<SubProjectBreakdown[]> {
   'use cache';
   cacheTag('dashboard', `dashboard:year:${year ?? 'all'}`);
@@ -103,8 +119,6 @@ export async function getBySubProject(year?: number | null): Promise<SubProjectB
   if (error || !data) return [];
   return data as SubProjectBreakdown[];
 }
-
-export type MonthlyPoint = { month: string; total_participants: number; activity_count: number };
 
 export async function getByMonth(year?: number | null): Promise<MonthlyPoint[]> {
   'use cache';
@@ -116,17 +130,6 @@ export async function getByMonth(year?: number | null): Promise<MonthlyPoint[]> 
   return data as MonthlyPoint[];
 }
 
-export type LocationBreakdown = {
-  id: string;
-  name: string;
-  slug: string;
-  type: string;
-  total_participants: number;
-  male: number;
-  female: number;
-  activity_count: number;
-};
-
 export async function getByLocation(year?: number | null): Promise<LocationBreakdown[]> {
   'use cache';
   cacheTag('dashboard', `dashboard:year:${year ?? 'all'}`);
@@ -136,14 +139,6 @@ export async function getByLocation(year?: number | null): Promise<LocationBreak
   if (error || !data) return [];
   return data as LocationBreakdown[];
 }
-
-export type ActivityFilters = {
-  sub_project_id?: string | null;
-  location_id?: string | null;
-  month?: number | null;     // 1–12; combined with the page-level year
-  q?: string | null;         // free-text search on notes
-  partner?: string | null;
-};
 
 export async function getRecentActivities(
   year?: number | null,
@@ -400,15 +395,6 @@ export async function getSubProjectBySlug(slug: string): Promise<SubProject | nu
   return data as SubProject;
 }
 
-export type LocationSummary = {
-  total_participants: number;
-  total_male: number;
-  total_female: number;
-  total_reach: number;
-  activity_count: number;
-  sub_project_count: number;
-};
-
 export async function getLocationHasGenderBreakdown(
   slug: string,
   year?: number | null
@@ -566,14 +552,6 @@ export async function getLocationMonthly(
     .map(([month, v]) => ({ month, ...v }));
 }
 
-export type MixSlice = {
-  id: string;
-  name: string;
-  slug: string;
-  total_participants: number;
-  activity_count: number;
-};
-
 export async function getLocationSubProjectMix(
   slug: string,
   year?: number | null
@@ -675,15 +653,6 @@ export async function getActivitiesByLocation(
   return data as unknown as ActivityWithRelations[];
 }
 
-export type SubProjectSummary = {
-  total_participants: number;
-  total_male: number;
-  total_female: number;
-  total_reach: number;
-  activity_count: number;
-  location_count: number;
-};
-
 export async function getSubProjectSummary(
   slug: string,
   year?: number | null
@@ -778,18 +747,6 @@ export async function getActivitiesBySubProject(
 // Phase 3 — Map, partners, report, demographics
 // ============================================================
 
-export type LocationMapPoint = {
-  id: string;
-  name: string;
-  slug: string;
-  type: string;
-  lat: number;
-  lng: number;
-  partner_type: string | null;
-  total_participants: number;
-  activity_count: number;
-};
-
 export async function getLocationsWithCoords(year?: number | null): Promise<LocationMapPoint[]> {
   'use cache';
   cacheTag('taxonomy:locations', 'dashboard', `dashboard:year:${year ?? 'all'}`);
@@ -824,15 +781,6 @@ export async function getLocationsWithCoords(year?: number | null): Promise<Loca
     });
 }
 
-export type PartnerSummaryRow = {
-  partner: string;
-  activity_count: number;
-  total_participants: number;
-  total_reach: number;
-  sub_projects: string[] | null;
-  last_activity_date: string | null;
-};
-
 export async function getPartnersSummary(year?: number | null): Promise<PartnerSummaryRow[]> {
   'use cache';
   cacheTag('partners', `partners:year:${year ?? 'all'}`);
@@ -842,15 +790,6 @@ export async function getPartnersSummary(year?: number | null): Promise<PartnerS
   if (error || !data) return [];
   return data as PartnerSummaryRow[];
 }
-
-export type TopMoverRow = {
-  id: string;
-  name: string;
-  slug: string;
-  current_value: number;
-  prior_value: number;
-  delta_pct: number | null;
-};
 
 export async function getReportTopMovers(
   year: number,

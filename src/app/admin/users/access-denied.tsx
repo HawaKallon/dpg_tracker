@@ -35,9 +35,12 @@ export function TeamAccessDenied({
           </code>
         </p>
       )}
-      <Button variant="outline" asChild>
-        <Link href="/admin">Back to admin</Link>
-      </Button>
+      <Link
+        href="/admin"
+        className="inline-flex h-9 items-center justify-center rounded-md border border-border bg-background px-4 text-sm font-medium hover:bg-muted"
+      >
+        Back to admin
+      </Link>
     </div>
   );
 }

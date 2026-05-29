@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { ArrowUpRight, GraduationCap, MapPin, Users } from 'lucide-react';
-import type { LocationBreakdown } from '@/lib/supabase/queries';
+import type { LocationBreakdown } from '@/lib/supabase/query-types';
 import { cn } from '@/lib/utils/cn';
 
 const TYPE_ICON = {
