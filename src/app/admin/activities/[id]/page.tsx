@@ -6,7 +6,6 @@ import {
   getCategories,
   getDemographicsTaxonomy,
   getLocations,
-  getSubCategories,
   getSubProjects,
 } from '@/lib/supabase/queries';
 import type { Activity } from '@/types/database';
@@ -19,10 +18,9 @@ export default async function EditActivityPage({ params }: { params: Promise<{ i
 
   const a = activity as Activity;
 
-  const [subs, cats, subCats, locs, taxonomy] = await Promise.all([
+  const [subs, cats, locs, taxonomy] = await Promise.all([
     getSubProjects(),
     getCategories(),
-    getSubCategories(),
     getLocations(),
     getDemographicsTaxonomy(),
   ]);
@@ -47,7 +45,6 @@ export default async function EditActivityPage({ params }: { params: Promise<{ i
           defaults={a}
           subProjects={subs}
           categories={cats}
-          subCategories={subCats}
           locations={locs}
           ageBandOptions={ageBandOptions}
           roleOptions={roleOptions}

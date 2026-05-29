@@ -5,6 +5,10 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { uploadLocationLogo } from '@/lib/supabase/storage';
 import { rateLimit } from '@/lib/security/rate-limit';
+import {
+  canonicalLocationName,
+  findMatchingLocation,
+} from '@/lib/utils/canonical-location';
 import type { RichTextDoc } from '@/types/database';
 
 function nullable(v: FormDataEntryValue | null): string | null {
@@ -75,6 +79,17 @@ export async function createLocation(formData: FormData) {
   const { supabase } = await gate();
   const payload = payloadFromForm(formData);
   if (!payload.name) throw new Error('Name is required');
+
+  payload.name = canonicalLocationName(payload.name);
+
+  const { data: allLocations } = await supabase.from('locations').select('id, name, slug');
+  const existing = findMatchingLocation(allLocations ?? [], payload.name);
+  if (existing) {
+    const slug = (existing as { slug?: string }).slug;
+    throw new Error(
+      `A location named "${existing.name}" already exists${slug ? ` (/${slug})` : ''}. Edit it instead of creating a duplicate.`,
+    );
+  }
 
   const id = nullable(formData.get('location_id')) ?? crypto.randomUUID();
   const logoFile = formData.get('logo_file');

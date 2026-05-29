@@ -17,7 +17,13 @@ import { PullQuote } from '@/components/public/pull-quote';
 import { Reveal } from '@/components/public/reveal';
 import { RichText } from '@/components/editor/rich-text';
 import { PageSkeleton } from '@/components/page-skeleton';
-import { getActivityById } from '@/lib/supabase/queries';
+import { ActivityFeed } from '@/components/activity-feed';
+import {
+  getActivityById,
+  getRelatedActivitiesByLocation,
+  getRelatedActivitiesBySubProject,
+} from '@/lib/supabase/queries';
+import { cn } from '@/lib/utils/cn';
 
 type Params = Promise<{ id: string }>;
 
@@ -71,16 +77,38 @@ async function ActivityDetailContent({ params }: { params: Params }) {
   const activity = await getActivityById(id);
   if (!activity) notFound();
 
+  const [moreFromCampus, moreFromProgram] = await Promise.all([
+    activity.location_id
+      ? getRelatedActivitiesByLocation(activity.location_id, activity.event_year, activity.id, 6)
+      : Promise.resolve([]),
+    activity.sub_project_id
+      ? getRelatedActivitiesBySubProject(activity.sub_project_id, activity.event_year, activity.id, 6)
+      : Promise.resolve([]),
+  ]);
+
   const male = activity.male_count ?? 0;
   const female = activity.female_count ?? 0;
   const total = activity.total_count ?? male + female;
   const reach = activity.reach ?? 0;
-  const femalePct = total > 0 ? Math.round((female / total) * 100) : 0;
-  const femaleHint = total > 0 ? `${femalePct}% of total` : undefined;
+  const hasGenderBreakdown = activity.male_count != null || activity.female_count != null;
+  const femalePct = hasGenderBreakdown && total > 0 ? Math.round((female / total) * 100) : 0;
+  const femaleHint =
+    hasGenderBreakdown && total > 0 ? `${femalePct}% of total` : undefined;
 
   const title = activityTitle(activity);
   const heroPhoto = activity.media_urls?.[0];
   const galleryPhotos = activity.media_urls?.slice(1) ?? [];
+  const partnerOrgs = activity.partner_orgs ?? [];
+  const ageBands = activity.age_bands ?? [];
+  const roles = activity.roles ?? [];
+
+  const facts = [
+    { show: !!activity.event_year, label: String(activity.event_year) },
+    { show: !!activity.data_source, label: activity.data_source ?? '' },
+    { show: partnerOrgs.length > 0, label: `${partnerOrgs.length} partner${partnerOrgs.length === 1 ? '' : 's'}` },
+    { show: ageBands.length > 0, label: `${ageBands.length} age band${ageBands.length === 1 ? '' : 's'}` },
+    { show: roles.length > 0, label: `${roles.length} role${roles.length === 1 ? '' : 's'}` },
+  ].filter((f) => f.show);
 
   return (
     <main id="main-content" className="mx-auto w-full max-w-6xl px-3 sm:px-4 lg:px-10 pt-6 sm:pt-8 pb-8 space-y-12 sm:space-y-16">
@@ -135,6 +163,20 @@ async function ActivityDetailContent({ params }: { params: Params }) {
           <h1 className="text-display text-[clamp(2rem,5.5vw,4rem)] text-ink max-w-4xl">
             {title}
           </h1>
+          {facts.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {facts.map((f) => (
+                <span
+                  key={f.label}
+                  className={cn(
+                    'inline-flex items-center rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-ink shadow-sm'
+                  )}
+                >
+                  {f.label}
+                </span>
+              ))}
+            </div>
+          )}
           <dl className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
             <div className="inline-flex items-center gap-1.5">
               <Calendar className="size-4" aria-hidden="true" />
@@ -196,8 +238,12 @@ async function ActivityDetailContent({ params }: { params: Params }) {
         className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 rounded-3xl bg-paper shadow-card px-5 sm:px-8 py-8"
       >
         <StatTile label="Participants" value={total} hint={femaleHint} tone="primary" forceRender />
-        <StatTile label="Male" value={male} forceRender={total > 0} />
-        <StatTile label="Female" value={female} forceRender={total > 0} />
+        {hasGenderBreakdown && (
+          <>
+            <StatTile label="Male" value={male} forceRender={total > 0} />
+            <StatTile label="Female" value={female} forceRender={total > 0} />
+          </>
+        )}
         <StatTile label="Reach" value={reach} hint="Broader audience" forceRender={reach > 0} />
       </section>
       </Reveal>
@@ -262,13 +308,13 @@ async function ActivityDetailContent({ params }: { params: Params }) {
       )}
 
       {/* Partners -------------------------------------------------- */}
-      {activity.partner_orgs.length > 0 && (
+      {partnerOrgs.length > 0 && (
         <Reveal delay={0.05}>
         <section aria-labelledby="partners-heading" className="space-y-4">
           <SectionEyebrow tone="accent" className="mb-2">In partnership with</SectionEyebrow>
           <h2 id="partners-heading" className="sr-only">Partners</h2>
           <div className="flex flex-wrap gap-2">
-            {activity.partner_orgs.map((p) => (
+            {partnerOrgs.map((p) => (
               <span
                 key={p}
                 className="inline-flex items-center rounded-full border border-border bg-card px-4 py-1.5 text-sm font-medium text-ink shadow-sm"
@@ -282,7 +328,7 @@ async function ActivityDetailContent({ params }: { params: Params }) {
       )}
 
       {/* Demographics --------------------------------------------- */}
-      {(activity.age_bands.length > 0 || activity.roles.length > 0) && (
+      {(ageBands.length > 0 || roles.length > 0) && (
         <Reveal delay={0.05}>
         <section aria-labelledby="demographics-heading" className="space-y-4">
           <header>
@@ -292,11 +338,11 @@ async function ActivityDetailContent({ params }: { params: Params }) {
             </h2>
           </header>
           <div className="grid sm:grid-cols-2 gap-3 sm:gap-4">
-            {activity.age_bands.length > 0 && (
+            {ageBands.length > 0 && (
               <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
                 <SectionEyebrow tone="muted">Age bands</SectionEyebrow>
                 <div className="flex flex-wrap gap-1.5 mt-3">
-                  {activity.age_bands.map((b) => (
+                  {ageBands.map((b) => (
                     <span
                       key={b}
                       className="inline-flex items-center rounded-full border border-accent/30 bg-accent/10 px-3 py-0.5 text-sm font-medium text-accent-deep"
@@ -307,11 +353,11 @@ async function ActivityDetailContent({ params }: { params: Params }) {
                 </div>
               </div>
             )}
-            {activity.roles.length > 0 && (
+            {roles.length > 0 && (
               <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
                 <SectionEyebrow tone="muted">Roles</SectionEyebrow>
                 <div className="flex flex-wrap gap-1.5 mt-3">
-                  {activity.roles.map((r) => (
+                  {roles.map((r) => (
                     <span
                       key={r}
                       className="inline-flex items-center rounded-full border border-signal/30 bg-signal/10 px-3 py-0.5 text-sm font-medium text-signal"
@@ -342,6 +388,36 @@ async function ActivityDetailContent({ params }: { params: Params }) {
             {activity.notes}
           </div>
         </section>
+        </Reveal>
+      )}
+
+      {/* Related --------------------------------------------------- */}
+      {(moreFromCampus.length > 0 || moreFromProgram.length > 0) && (
+        <Reveal delay={0.05}>
+          <section aria-label="Related activities" className="space-y-8">
+            {moreFromCampus.length > 0 && (
+              <div className="space-y-4">
+                <header>
+                  <SectionEyebrow tone="accent">More</SectionEyebrow>
+                  <h2 className="font-serif text-3xl text-ink mt-2 leading-tight">
+                    More from this campus
+                  </h2>
+                </header>
+                <ActivityFeed items={moreFromCampus} />
+              </div>
+            )}
+            {moreFromProgram.length > 0 && (
+              <div className="space-y-4">
+                <header>
+                  <SectionEyebrow tone="accent">More</SectionEyebrow>
+                  <h2 className="font-serif text-3xl text-ink mt-2 leading-tight">
+                    More from this program
+                  </h2>
+                </header>
+                <ActivityFeed items={moreFromProgram} />
+              </div>
+            )}
+          </section>
         </Reveal>
       )}
 

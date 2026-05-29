@@ -7,15 +7,40 @@ import { getAllActivities } from '@/lib/supabase/queries';
 import { deleteActivity } from './actions';
 import { ListToolbar, PrimaryAction } from '../_components/list-toolbar';
 import { EmptyState } from '../_components/empty-state';
+import { ListSearch } from '../_components/list-search';
 
-export default async function ActivitiesPage() {
+type SearchParams = Promise<{ q?: string }>;
+
+export default async function ActivitiesPage({
+  searchParams,
+}: {
+  searchParams: SearchParams;
+}) {
   const rows = await getAllActivities();
+  const { q } = await searchParams;
+  const needle = (q ?? '').trim().toLowerCase();
+  const filtered = needle
+    ? rows.filter((a) => {
+        const hay = [
+          a.sub_project?.name,
+          a.category?.name,
+          a.location?.name,
+          a.notes,
+          a.month_label,
+          a.activity_date,
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+        return hay.includes(needle);
+      })
+    : rows;
 
   return (
     <div className="space-y-6">
       <ListToolbar
         title="Activities"
-        count={rows.length}
+        count={filtered.length}
         description="Every recorded activity across all sub-projects."
         actions={
           <Link href="/admin/activities/new">
@@ -26,18 +51,26 @@ export default async function ActivitiesPage() {
         }
       />
 
+      <ListSearch placeholder="Search by sub-project, location, notes…" />
+
       <div className="rounded-xl border border-border bg-card overflow-hidden">
-        {rows.length === 0 ? (
+        {filtered.length === 0 ? (
           <EmptyState
             icon={ListChecks}
-            title="No activities yet"
-            description="Create your first activity to start tracking participants."
+            title={needle ? `No matches for "${q}"` : 'No activities yet'}
+            description={
+              needle
+                ? 'Try a different search term, or clear the search to see all activities.'
+                : 'Create your first activity to start tracking participants.'
+            }
             action={
-              <Link href="/admin/activities/new">
-                <PrimaryAction>
-                  <Plus className="size-4" /> Add activity
-                </PrimaryAction>
-              </Link>
+              !needle && (
+                <Link href="/admin/activities/new">
+                  <PrimaryAction>
+                    <Plus className="size-4" /> Add activity
+                  </PrimaryAction>
+                </Link>
+              )
             }
           />
         ) : (
@@ -56,7 +89,7 @@ export default async function ActivitiesPage() {
               </TR>
             </THead>
             <TBody>
-              {rows.map((a) => (
+              {filtered.map((a) => (
                 <TR key={a.id}>
                   <TD className="text-muted-foreground tabular-nums">{a.event_year}</TD>
                   <TD className="whitespace-nowrap text-muted-foreground">

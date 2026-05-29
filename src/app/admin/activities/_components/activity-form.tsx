@@ -12,12 +12,11 @@ import { RichTextEditor } from '@/components/editor/rich-text-editor';
 import { ChipInput } from '@/components/chip-input';
 import { TaxonomyChips } from '@/components/taxonomy-chips';
 import { MediaPicker } from '@/components/media-picker';
-import { createLocationInline, createSubCategoryInline } from '../actions';
+import { createLocationInline } from '../actions';
 import type {
   Category,
   Location,
   RichTextDoc,
-  SubCategory,
   SubProject,
 } from '@/types/database';
 
@@ -25,7 +24,6 @@ export type ActivityFormDefaults = {
   id?: string;
   sub_project_id?: string | null;
   category_id?: string | null;
-  sub_category_id?: string | null;
   location_id?: string | null;
   event_year?: number | null;
   activity_date?: string | null;
@@ -33,7 +31,6 @@ export type ActivityFormDefaults = {
   male_count?: number | null;
   female_count?: number | null;
   total_count?: number | null;
-  reach?: number | null;
   notes?: string | null;
   discourse_url?: string | null;
   outcomes?: RichTextDoc | null;
@@ -45,14 +42,12 @@ export type ActivityFormDefaults = {
 };
 
 type LocationLite = { id: string; name: string; type: string };
-type SubCategoryLite = { id: string; category_id: string; name: string };
 
 export function ActivityForm({
   action,
   defaults,
   subProjects,
   categories,
-  subCategories,
   locations,
   ageBandOptions,
   roleOptions,
@@ -62,7 +57,6 @@ export function ActivityForm({
   defaults?: ActivityFormDefaults;
   subProjects: SubProject[];
   categories: Category[];
-  subCategories: SubCategory[];
   locations: Location[];
   ageBandOptions: string[];
   roleOptions: string[];
@@ -71,7 +65,6 @@ export function ActivityForm({
   const [activityId] = useState<string>(() => defaults?.id ?? crypto.randomUUID());
   const [subProjectId, setSubProjectId] = useState(defaults?.sub_project_id ?? '');
   const [categoryId, setCategoryId] = useState(defaults?.category_id ?? '');
-  const [subCategoryId, setSubCategoryId] = useState(defaults?.sub_category_id ?? '');
   const [locationId, setLocationId] = useState(defaults?.location_id ?? '');
   const [male, setMale] = useState<string>(defaults?.male_count?.toString() ?? '');
   const [female, setFemale] = useState<string>(defaults?.female_count?.toString() ?? '');
@@ -104,9 +97,6 @@ export function ActivityForm({
   const [locList, setLocList] = useState<LocationLite[]>(
     locations.map((l) => ({ id: l.id, name: l.name, type: l.type }))
   );
-  const [subCatList, setSubCatList] = useState<SubCategoryLite[]>(
-    subCategories.map((sc) => ({ id: sc.id, category_id: sc.category_id, name: sc.name }))
-  );
 
   const [showLocAdd, setShowLocAdd] = useState(false);
   const [newLocName, setNewLocName] = useState('');
@@ -115,20 +105,11 @@ export function ActivityForm({
   );
   const [locError, setLocError] = useState<string | null>(null);
 
-  const [showSubCatAdd, setShowSubCatAdd] = useState(false);
-  const [newSubCatName, setNewSubCatName] = useState('');
-  const [subCatError, setSubCatError] = useState<string | null>(null);
-
   const [pendingLoc, startLocTransition] = useTransition();
-  const [pendingSubCat, startSubCatTransition] = useTransition();
 
   const filteredCats = useMemo(
     () => categories.filter((c) => !subProjectId || c.sub_project_id === subProjectId),
     [categories, subProjectId]
-  );
-  const filteredSubCats = useMemo(
-    () => subCatList.filter((sc) => !categoryId || sc.category_id === categoryId),
-    [subCatList, categoryId]
   );
 
   const autoTotal = (() => {
@@ -159,32 +140,6 @@ export function ActivityForm({
         setShowLocAdd(false);
       } catch (e) {
         setLocError(e instanceof Error ? e.message : 'Failed to create location');
-      }
-    });
-  }
-
-  function handleAddSubCategory() {
-    setSubCatError(null);
-    const name = newSubCatName.trim();
-    if (!categoryId) {
-      setSubCatError('Pick a category first');
-      return;
-    }
-    if (!name) {
-      setSubCatError('Name is required');
-      return;
-    }
-    startSubCatTransition(async () => {
-      try {
-        const created = await createSubCategoryInline({ category_id: categoryId, name });
-        setSubCatList((prev) =>
-          prev.some((p) => p.id === created.id) ? prev : [...prev, created].sort((a, b) => a.name.localeCompare(b.name))
-        );
-        setSubCategoryId(created.id);
-        setNewSubCatName('');
-        setShowSubCatAdd(false);
-      } catch (e) {
-        setSubCatError(e instanceof Error ? e.message : 'Failed to create sub-category');
       }
     });
   }
@@ -224,7 +179,6 @@ export function ActivityForm({
             onChange={(e) => {
               setSubProjectId(e.target.value);
               setCategoryId('');
-              setSubCategoryId('');
             }}
           >
             <option value="">Select…</option>
@@ -240,10 +194,7 @@ export function ActivityForm({
             id="category_id"
             name="category_id"
             value={categoryId ?? ''}
-            onChange={(e) => {
-              setCategoryId(e.target.value);
-              setSubCategoryId('');
-            }}
+            onChange={(e) => setCategoryId(e.target.value)}
             disabled={!subProjectId}
           >
             <option value="">—</option>
@@ -251,77 +202,6 @@ export function ActivityForm({
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
           </Select>
-        </div>
-
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="sub_category_id">Sub-category</Label>
-            {!showSubCatAdd && (
-              <button
-                type="button"
-                onClick={() => {
-                  setShowSubCatAdd(true);
-                  setSubCatError(null);
-                }}
-                disabled={!categoryId}
-                className="inline-flex items-center gap-1 text-xs text-primary hover:underline disabled:opacity-40 disabled:no-underline disabled:cursor-not-allowed"
-              >
-                <Plus className="size-3" />
-                Add new
-              </button>
-            )}
-          </div>
-          {showSubCatAdd ? (
-            <div className="space-y-1.5">
-              <div className="flex gap-2">
-                <Input
-                  value={newSubCatName}
-                  onChange={(e) => setNewSubCatName(e.target.value)}
-                  placeholder="New sub-category name"
-                  disabled={pendingSubCat}
-                />
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={handleAddSubCategory}
-                  disabled={pendingSubCat}
-                >
-                  {pendingSubCat ? 'Adding…' : 'Create'}
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    setShowSubCatAdd(false);
-                    setNewSubCatName('');
-                    setSubCatError(null);
-                  }}
-                  disabled={pendingSubCat}
-                  aria-label="Cancel"
-                >
-                  <X className="size-4" />
-                </Button>
-              </div>
-              {subCatError && <p className="text-xs text-destructive">{subCatError}</p>}
-            </div>
-          ) : (
-            <Select
-              id="sub_category_id"
-              name="sub_category_id"
-              value={subCategoryId ?? ''}
-              onChange={(e) => setSubCategoryId(e.target.value)}
-              disabled={!categoryId}
-            >
-              <option value="">—</option>
-              {filteredSubCats.map((sc) => (
-                <option key={sc.id} value={sc.id}>{sc.name}</option>
-              ))}
-            </Select>
-          )}
-          {showSubCatAdd && (
-            <input type="hidden" name="sub_category_id" value={subCategoryId ?? ''} />
-          )}
         </div>
 
         <div className="space-y-1.5">
@@ -410,24 +290,10 @@ export function ActivityForm({
         <header className="mb-4">
           <h2 className="text-sm font-semibold text-accent">When</h2>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Year drives dashboard filtering. Date is exact; month label is for legacy/fuzzy entries.
+            Year is taken from the date. If no date is given, the current year is used. Month label is for legacy/fuzzy entries.
           </p>
         </header>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        <div className="space-y-1.5">
-          <Label htmlFor="event_year">Year *</Label>
-          <Input
-            id="event_year"
-            name="event_year"
-            type="number"
-            min={2020}
-            max={2100}
-            required
-            defaultValue={defaults?.event_year ?? new Date().getFullYear()}
-          />
-          <p className="text-xs text-muted-foreground">Used to filter the dashboard by year.</p>
-        </div>
-
         <div className="space-y-1.5">
           <Label htmlFor="activity_date">Date</Label>
           <Input
@@ -452,13 +318,12 @@ export function ActivityForm({
 
       <section>
         <header className="mb-4">
-          <h2 className="text-sm font-semibold text-accent">Participants & reach</h2>
+          <h2 className="text-sm font-semibold text-accent">Participants</h2>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Total auto-calculates from M + F until you edit it. Reach is the broader audience
-            (Discourse views, social engagement, livestream viewers).
+            Total auto-calculates from M + F until you edit it.
           </p>
         </header>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           <div className="space-y-1.5">
             <Label htmlFor="male_count">Male</Label>
             <Input
@@ -494,20 +359,6 @@ export function ActivityForm({
                 setTotal(e.target.value);
               }}
             />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="reach">Reach</Label>
-            <Input
-              id="reach"
-              name="reach"
-              type="number"
-              min={0}
-              defaultValue={defaults?.reach ?? ''}
-              placeholder="e.g. 1200"
-            />
-            <p className="text-xs text-muted-foreground">
-              Broader audience touched (not in-person participants).
-            </p>
           </div>
         </div>
       </section>

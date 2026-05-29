@@ -9,6 +9,7 @@ import {
   History,
   MapPin,
   FolderKanban,
+  Users,
   ChevronRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
@@ -19,6 +20,7 @@ const ICONS = {
   locations: MapPin,
   programs: FolderKanban,
   lookups: Database,
+  users: Users,
   audit: History,
 } as const;
 

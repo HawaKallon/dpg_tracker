@@ -17,7 +17,13 @@ const TYPE_LABEL = {
   other: 'Venue',
 } as const;
 
-export function LocationsGrid({ data }: { data: LocationBreakdown[] }) {
+export function LocationsGrid({
+  data,
+  year,
+}: {
+  data: LocationBreakdown[];
+  year?: number;
+}) {
   const max = Math.max(1, ...data.map((d) => d.total_participants));
 
   if (data.length === 0) {
@@ -110,7 +116,10 @@ export function LocationsGrid({ data }: { data: LocationBreakdown[] }) {
         return (
           <Link
             key={loc.id}
-            href={`/locations/${loc.slug}`}
+            href={{
+              pathname: `/locations/${loc.slug}`,
+              query: year ? { year: String(year) } : undefined,
+            }}
             className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-2xl"
             aria-label={`View ${loc.name} details`}
           >

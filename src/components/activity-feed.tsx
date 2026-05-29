@@ -25,6 +25,7 @@ export function ActivityFeed({ items }: { items: ActivityWithRelations[] }) {
         const female = a.female_count ?? 0;
         const male = a.male_count ?? 0;
         const total = a.total_count ?? male + female;
+        const hasGenderBreakdown = a.male_count != null || a.female_count != null;
         const monthShort = a.activity_date
           ? new Date(a.activity_date).toLocaleDateString(undefined, { month: 'short' })
           : a.month_label?.slice(0, 3) ?? '—';
@@ -88,16 +89,18 @@ export function ActivityFeed({ items }: { items: ActivityWithRelations[] }) {
                     participants
                   </div>
                 </div>
-                <div className="hidden sm:flex flex-col gap-0.5 text-xs min-w-[64px]">
-                  <span className="text-muted-foreground">
-                    M{' '}
-                    <span className="font-medium text-signal tabular-nums">{male}</span>
-                  </span>
-                  <span className="text-muted-foreground">
-                    F{' '}
-                    <span className="font-medium text-accent tabular-nums">{female}</span>
-                  </span>
-                </div>
+                {hasGenderBreakdown && (
+                  <div className="hidden sm:flex flex-col gap-0.5 text-xs min-w-[64px]">
+                    <span className="text-muted-foreground">
+                      M{' '}
+                      <span className="font-medium text-signal tabular-nums">{male}</span>
+                    </span>
+                    <span className="text-muted-foreground">
+                      F{' '}
+                      <span className="font-medium text-accent tabular-nums">{female}</span>
+                    </span>
+                  </div>
+                )}
                 {a.discourse_url && (
                   <span
                     aria-label="External discussion"

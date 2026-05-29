@@ -7,15 +7,33 @@ import { getLocations } from '@/lib/supabase/queries';
 import { deleteLocation } from './actions';
 import { ListToolbar, PrimaryAction } from '../_components/list-toolbar';
 import { EmptyState } from '../_components/empty-state';
+import { ListSearch } from '../_components/list-search';
 
-export default async function AdminLocationsPage() {
+type SearchParams = Promise<{ q?: string }>;
+
+export default async function AdminLocationsPage({
+  searchParams,
+}: {
+  searchParams: SearchParams;
+}) {
   const rows = await getLocations();
+  const { q } = await searchParams;
+  const needle = (q ?? '').trim().toLowerCase();
+  const filtered = needle
+    ? rows.filter((l) => {
+        const hay = [l.name, l.slug, l.partner_type, l.region, l.type]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+        return hay.includes(needle);
+      })
+    : rows;
 
   return (
     <div className="space-y-6">
       <ListToolbar
         title="Locations"
-        count={rows.length}
+        count={filtered.length}
         description={
           <>
             Venues where activities take place. Each has a public page at{' '}
@@ -34,18 +52,26 @@ export default async function AdminLocationsPage() {
         }
       />
 
+      <ListSearch placeholder="Search by name, slug, partner, region…" />
+
       <div className="rounded-xl border border-border bg-card overflow-hidden">
-        {rows.length === 0 ? (
+        {filtered.length === 0 ? (
           <EmptyState
             icon={MapPin}
-            title="No locations yet"
-            description="Add a venue, hub, or university to start tagging activities."
+            title={needle ? `No matches for "${q}"` : 'No locations yet'}
+            description={
+              needle
+                ? 'Try a different search term, or clear the search to see all locations.'
+                : 'Add a venue, hub, or university to start tagging activities.'
+            }
             action={
-              <Link href="/admin/locations/new">
-                <PrimaryAction>
-                  <Plus className="size-4" /> Add location
-                </PrimaryAction>
-              </Link>
+              !needle && (
+                <Link href="/admin/locations/new">
+                  <PrimaryAction>
+                    <Plus className="size-4" /> Add location
+                  </PrimaryAction>
+                </Link>
+              )
             }
           />
         ) : (
@@ -61,7 +87,7 @@ export default async function AdminLocationsPage() {
               </TR>
             </THead>
             <TBody>
-              {rows.map((l) => (
+              {filtered.map((l) => (
                 <TR key={l.id}>
                   <TD>
                     <div className="flex items-center gap-2.5">

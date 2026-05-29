@@ -269,7 +269,7 @@ async function HomeContent({ searchParams }: { searchParams: SearchParams }) {
               {universities.length} {universities.length === 1 ? 'campus' : 'campuses'}
             </span>
           </div>
-          <LocationsGrid data={universities} />
+          <LocationsGrid data={universities} year={currentYear} />
         </section>
 
         {/* Hubs & other venues */}
@@ -283,7 +283,7 @@ async function HomeContent({ searchParams }: { searchParams: SearchParams }) {
                 Innovation hubs, online forums, and other non-campus locations.
               </p>
             </div>
-            <LocationsGrid data={otherVenues} />
+            <LocationsGrid data={otherVenues} year={currentYear} />
           </section>
         )}
 

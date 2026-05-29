@@ -5,6 +5,10 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { uploadActivityMedia } from '@/lib/supabase/storage';
 import { rateLimit } from '@/lib/security/rate-limit';
+import {
+  canonicalLocationName,
+  findMatchingLocation,
+} from '@/lib/utils/canonical-location';
 import type { RichTextDoc } from '@/types/database';
 
 function invalidateActivity(
@@ -57,6 +61,85 @@ function fileArray(values: FormDataEntryValue[]): File[] {
   return values.filter((v): v is File => v instanceof File && v.size > 0);
 }
 
+function extractMissingActivitiesColumn(message: string): string | null {
+  const patterns = [
+    /Could not find the '([^']+)' column of 'activities'/i,
+    /column\s+activities\.([a-zA-Z0-9_]+)\s+does not exist/i,
+    /column\s+"?([a-zA-Z0-9_]+)"?\s+of relation\s+"activities"\s+does not exist/i,
+  ];
+  for (const p of patterns) {
+    const m = message.match(p);
+    if (m?.[1]) return m[1];
+  }
+  return null;
+}
+
+async function insertActivityWithColumnFallback(
+  supabase: Awaited<ReturnType<typeof requireAuth>>['supabase'],
+  payload: Record<string, unknown>
+) {
+  const current = { ...payload };
+  let attempts = 0;
+  const maxAttempts = 20;
+  const removed = new Set<string>();
+
+  while (attempts < maxAttempts) {
+    const { error } = await supabase.from('activities').insert(current);
+    if (!error) return;
+
+    const missing = extractMissingActivitiesColumn(error.message);
+    if (!missing) throw new Error(error.message);
+    if (!(missing in current) || removed.has(missing)) {
+      throw new Error(error.message);
+    }
+
+    delete current[missing];
+    removed.add(missing);
+    attempts += 1;
+  }
+
+  throw new Error(
+    `Failed to insert activity due to unsupported schema columns. Removed: ${[
+      ...removed,
+    ].join(', ')}`
+  );
+}
+
+async function updateActivityWithColumnFallback(
+  supabase: Awaited<ReturnType<typeof requireAuth>>['supabase'],
+  id: string,
+  payload: Record<string, unknown>
+) {
+  const current = { ...payload };
+  let attempts = 0;
+  const maxAttempts = 20;
+  const removed = new Set<string>();
+
+  while (attempts < maxAttempts) {
+    const { error } = await supabase
+      .from('activities')
+      .update(current)
+      .eq('id', id);
+    if (!error) return;
+
+    const missing = extractMissingActivitiesColumn(error.message);
+    if (!missing) throw new Error(error.message);
+    if (!(missing in current) || removed.has(missing)) {
+      throw new Error(error.message);
+    }
+
+    delete current[missing];
+    removed.add(missing);
+    attempts += 1;
+  }
+
+  throw new Error(
+    `Failed to update activity due to unsupported schema columns. Removed: ${[
+      ...removed,
+    ].join(', ')}`
+  );
+}
+
 async function requireAuth() {
   const supabase = await createClient();
   const {
@@ -73,14 +156,13 @@ function payloadFromForm(formData: FormData) {
   const total = totalRaw ?? (male !== null && female !== null ? male + female : null);
 
   const activity_date = nullable(formData.get('activity_date'));
-  const yearFromDate = activity_date ? Number(activity_date.slice(0, 4)) : null;
-  const yearFromForm = nullableInt(formData.get('event_year'));
-  const event_year = yearFromForm ?? yearFromDate ?? new Date().getFullYear();
+  const event_year = activity_date
+    ? Number(activity_date.slice(0, 4))
+    : new Date().getFullYear();
 
   return {
     sub_project_id: String(formData.get('sub_project_id') ?? ''),
     category_id: nullable(formData.get('category_id')),
-    sub_category_id: nullable(formData.get('sub_category_id')),
     location_id: nullable(formData.get('location_id')),
     event_year,
     activity_date,
@@ -88,7 +170,6 @@ function payloadFromForm(formData: FormData) {
     male_count: male,
     female_count: female,
     total_count: total,
-    reach: nullableInt(formData.get('reach')),
     notes: nullable(formData.get('notes')),
     discourse_url: nullable(formData.get('discourse_url')),
     outcomes: parseRichText(formData.get('outcomes')),
@@ -128,13 +209,12 @@ export async function createActivity(formData: FormData) {
     ? await Promise.all(newFiles.map((f) => uploadActivityMedia(activityId, f)))
     : [];
 
-  const { error } = await supabase.from('activities').insert({
+  await insertActivityWithColumnFallback(supabase, {
     id: activityId,
     ...payload,
     media_urls: mediaUrls,
     created_by: user.id,
   });
-  if (error) throw new Error(error.message);
 
   const slugs = await resolveSlugs(supabase, payload);
   invalidateActivity(activityId, payload.event_year, slugs);
@@ -160,11 +240,10 @@ export async function updateActivity(id: string, formData: FormData) {
     ? await Promise.all(newFiles.map((f) => uploadActivityMedia(id, f)))
     : [];
 
-  const { error } = await supabase
-    .from('activities')
-    .update({ ...payload, media_urls: [...keepUrls, ...newUrls] })
-    .eq('id', id);
-  if (error) throw new Error(error.message);
+  await updateActivityWithColumnFallback(supabase, id, {
+    ...payload,
+    media_urls: [...keepUrls, ...newUrls],
+  });
 
   // Invalidate both the previous slugs/year and the new ones so reassignments propagate.
   if (prev) {
@@ -216,54 +295,21 @@ export async function createLocationInline(input: {
 }): Promise<{ id: string; name: string; type: string }> {
   const { supabase, user } = await requireAuth();
   await rateLimit(user.id, 'lookup:write', { max: 30 });
-  const name = input.name.trim();
-  if (!name) throw new Error('Name is required');
+  const canonical = canonicalLocationName(input.name);
+  if (!canonical) throw new Error('Name is required');
 
-  const { data: existing } = await supabase
-    .from('locations')
-    .select('id, name, type')
-    .ilike('name', name)
-    .maybeSingle();
+  const { data: allLocations } = await supabase.from('locations').select('id, name, type');
+  const existing = findMatchingLocation(allLocations ?? [], input.name);
   if (existing) return existing;
 
   const { data, error } = await supabase
     .from('locations')
-    .insert({ name, type: input.type })
+    .insert({ name: canonical, type: input.type })
     .select('id, name, type')
     .single();
   if (error) throw new Error(error.message);
 
   updateTag('taxonomy:locations');
-  revalidatePath('/admin/lookups');
-  return data;
-}
-
-export async function createSubCategoryInline(input: {
-  category_id: string;
-  name: string;
-}): Promise<{ id: string; category_id: string; name: string }> {
-  const { supabase, user } = await requireAuth();
-  await rateLimit(user.id, 'lookup:write', { max: 30 });
-  const name = input.name.trim();
-  if (!input.category_id) throw new Error('Pick a category first');
-  if (!name) throw new Error('Name is required');
-
-  const { data: existing } = await supabase
-    .from('sub_categories')
-    .select('id, category_id, name')
-    .eq('category_id', input.category_id)
-    .ilike('name', name)
-    .maybeSingle();
-  if (existing) return existing;
-
-  const { data, error } = await supabase
-    .from('sub_categories')
-    .insert({ category_id: input.category_id, name })
-    .select('id, category_id, name')
-    .single();
-  if (error) throw new Error(error.message);
-
-  updateTag('taxonomy:categories');
   revalidatePath('/admin/lookups');
   return data;
 }

@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Plus, ArrowUpRight, Users, ListChecks, Activity, MapPin } from 'lucide-react';
+import { Plus, ArrowUpRight, Users, ListChecks, MapPin } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { getDashboardSummary, getRecentActivities } from '@/lib/supabase/queries';
 import { ListToolbar, PrimaryAction } from './_components/list-toolbar';
@@ -37,11 +37,6 @@ export default async function AdminHome() {
             label: 'Activities',
             value: summary.activity_count ?? 0,
             icon: ListChecks,
-          },
-          {
-            label: 'Reach',
-            value: summary.total_reach ?? 0,
-            icon: Activity,
           },
           {
             label: 'Locations',

@@ -3,12 +3,12 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import {
   ExternalLink,
-  Search,
   Bell,
   ChevronDown,
   Sparkles,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
+import { isStaffRole, roleLabel } from '@/lib/auth/roles';
 import { AdminNavLink, type AdminNavIcon } from '@/components/admin-nav-link';
 import { AdminUserMenu } from '@/components/admin-user-menu';
 
@@ -18,6 +18,7 @@ const NAV: { href: string; label: string; icon: AdminNavIcon }[] = [
   { href: '/admin/locations', label: 'Locations', icon: 'locations' },
   { href: '/admin/sub-projects', label: 'Sub-projects', icon: 'programs' },
   { href: '/admin/lookups', label: 'Lookups', icon: 'lookups' },
+  { href: '/admin/users', label: 'Team', icon: 'users' },
   { href: '/admin/audit', label: 'Audit log', icon: 'audit' },
 ];
 
@@ -63,7 +64,10 @@ async function AdminShell({ children }: { children: React.ReactNode }) {
     .slice(0, 2)
     .map((s: string) => s[0]?.toUpperCase() ?? '')
     .join('');
-  const role = profile?.role ?? 'admin';
+  const role = profile?.role ?? 'viewer';
+  if (!isStaffRole(role)) redirect('/login?error=Access%20denied');
+
+  const roleDisplay = roleLabel(role);
 
   return (
     <div className="min-h-screen flex bg-sidebar text-sidebar-foreground">
@@ -81,7 +85,7 @@ async function AdminShell({ children }: { children: React.ReactNode }) {
           </span>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium text-foreground truncate">DPG Workspace</p>
-            <p className="text-[11px] text-muted-foreground truncate">Programs · {role}</p>
+            <p className="text-[11px] text-muted-foreground truncate">Programs · {roleDisplay}</p>
           </div>
           <ChevronDown className="size-3.5 text-muted-foreground shrink-0" />
         </div>
@@ -107,7 +111,7 @@ async function AdminShell({ children }: { children: React.ReactNode }) {
             variant="sidebar"
             displayName={displayName}
             email={user.email ?? ''}
-            role={role}
+            role={roleDisplay}
             initials={initials}
           />
         </div>
@@ -124,13 +128,7 @@ async function AdminShell({ children }: { children: React.ReactNode }) {
                 DPG Admin
               </Link>
             </div>
-            <div className="hidden md:flex items-center gap-2 h-9 px-3 rounded-md border border-border bg-background w-[220px] text-muted-foreground">
-              <Search className="size-4" />
-              <span className="text-xs flex-1">Search…</span>
-              <kbd className="inline-flex items-center rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground">
-                ⌘K
-              </kbd>
-            </div>
+            <div className="hidden md:block" />
             <div className="flex items-center gap-1.5">
               <button
                 type="button"
@@ -144,7 +142,7 @@ async function AdminShell({ children }: { children: React.ReactNode }) {
                 variant="header"
                 displayName={displayName}
                 email={user.email ?? ''}
-                role={role}
+                role={roleDisplay}
                 initials={initials}
               />
             </div>

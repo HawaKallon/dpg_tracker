@@ -3,6 +3,10 @@
 import { revalidatePath, updateTag } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { rateLimit } from '@/lib/security/rate-limit';
+import {
+  canonicalLocationName,
+  findMatchingLocation,
+} from '@/lib/utils/canonical-location';
 
 function slugify(s: string) {
   return s
@@ -79,10 +83,18 @@ export async function deleteSubCategory(formData: FormData) {
 // ---- Locations ----
 export async function createLocation(formData: FormData) {
   const supabase = await requireAdmin();
-  const name = String(formData.get('name') ?? '').trim();
+  const rawName = String(formData.get('name') ?? '').trim();
   const type = String(formData.get('type') ?? 'other');
   const region = String(formData.get('region') ?? '').trim() || null;
-  if (!name) return;
+  if (!rawName) return;
+
+  const name = canonicalLocationName(rawName);
+  const { data: allLocations } = await supabase.from('locations').select('id, name');
+  if (findMatchingLocation(allLocations ?? [], rawName)) {
+    revalidatePath('/admin/lookups');
+    return;
+  }
+
   await supabase.from('locations').insert({ name, type, region });
   updateTag('taxonomy:locations');
   revalidatePath('/admin/lookups');

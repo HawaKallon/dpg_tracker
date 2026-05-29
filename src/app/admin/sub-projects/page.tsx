@@ -7,15 +7,33 @@ import { getSubProjects } from '@/lib/supabase/queries';
 import { deleteSubProject } from './actions';
 import { ListToolbar, PrimaryAction } from '../_components/list-toolbar';
 import { EmptyState } from '../_components/empty-state';
+import { ListSearch } from '../_components/list-search';
 
-export default async function AdminSubProjectsPage() {
+type SearchParams = Promise<{ q?: string }>;
+
+export default async function AdminSubProjectsPage({
+  searchParams,
+}: {
+  searchParams: SearchParams;
+}) {
   const rows = await getSubProjects();
+  const { q } = await searchParams;
+  const needle = (q ?? '').trim().toLowerCase();
+  const filtered = needle
+    ? rows.filter((s) => {
+        const hay = [s.name, s.slug, s.funder_name]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+        return hay.includes(needle);
+      })
+    : rows;
 
   return (
     <div className="space-y-6">
       <ListToolbar
         title="Sub-projects"
-        count={rows.length}
+        count={filtered.length}
         description={
           <>
             Programs surfaced on the public site at{' '}
@@ -34,18 +52,26 @@ export default async function AdminSubProjectsPage() {
         }
       />
 
+      <ListSearch placeholder="Search by name, slug, funder…" />
+
       <div className="rounded-xl border border-border bg-card overflow-hidden">
-        {rows.length === 0 ? (
+        {filtered.length === 0 ? (
           <EmptyState
             icon={FolderKanban}
-            title="No sub-projects yet"
-            description="Create your first program to organize activities."
+            title={needle ? `No matches for "${q}"` : 'No sub-projects yet'}
+            description={
+              needle
+                ? 'Try a different search term, or clear the search to see all sub-projects.'
+                : 'Create your first program to organize activities.'
+            }
             action={
-              <Link href="/admin/sub-projects/new">
-                <PrimaryAction>
-                  <Plus className="size-4" /> Add sub-project
-                </PrimaryAction>
-              </Link>
+              !needle && (
+                <Link href="/admin/sub-projects/new">
+                  <PrimaryAction>
+                    <Plus className="size-4" /> Add sub-project
+                  </PrimaryAction>
+                </Link>
+              )
             }
           />
         ) : (
@@ -61,7 +87,7 @@ export default async function AdminSubProjectsPage() {
               </TR>
             </THead>
             <TBody>
-              {rows.map((s) => (
+              {filtered.map((s) => (
                 <TR key={s.id}>
                   <TD className="font-medium text-foreground">{s.name}</TD>
                   <TD>
