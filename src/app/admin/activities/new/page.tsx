@@ -2,18 +2,20 @@ import { ActivityForm } from '../_components/activity-form';
 import { createActivity } from '../actions';
 import {
   getCategories,
+  getDemographicsTaxonomy,
   getLocations,
-  getSubCategories,
   getSubProjects,
 } from '@/lib/supabase/queries';
 
 export default async function NewActivityPage() {
-  const [subs, cats, subCats, locs] = await Promise.all([
+  const [subs, cats, locs, taxonomy] = await Promise.all([
     getSubProjects(),
     getCategories(),
-    getSubCategories(),
     getLocations(),
+    getDemographicsTaxonomy(),
   ]);
+  const ageBandOptions = taxonomy.filter((t) => t.kind === 'age_band').map((t) => t.value);
+  const roleOptions = taxonomy.filter((t) => t.kind === 'role').map((t) => t.value);
 
   return (
     <div className="space-y-8">
@@ -32,8 +34,9 @@ export default async function NewActivityPage() {
           action={createActivity}
           subProjects={subs}
           categories={cats}
-          subCategories={subCats}
           locations={locs}
+          ageBandOptions={ageBandOptions}
+          roleOptions={roleOptions}
           submitLabel="Create activity"
         />
       </div>

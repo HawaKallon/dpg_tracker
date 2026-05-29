@@ -42,3 +42,20 @@ export function createServiceClient() {
     }
   );
 }
+
+export function createPublicClient() {
+  // Anon-key client with no cookie wiring — safe to call from inside 'use cache' functions
+  // where cookies()/headers() are not allowed. RLS still applies (public-select policies).
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return [];
+        },
+        setAll() {},
+      },
+    }
+  );
+}

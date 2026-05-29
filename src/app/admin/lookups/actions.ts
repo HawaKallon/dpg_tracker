@@ -1,7 +1,12 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, updateTag } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
+import { rateLimit } from '@/lib/security/rate-limit';
+import {
+  canonicalLocationName,
+  findMatchingLocation,
+} from '@/lib/utils/canonical-location';
 
 function slugify(s: string) {
   return s
@@ -16,6 +21,7 @@ async function requireAdmin() {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
+  await rateLimit(user.id, 'lookup:write', { max: 40 });
   return supabase;
 }
 
@@ -26,6 +32,7 @@ export async function createSubProject(formData: FormData) {
   const display_order = Number(formData.get('display_order') ?? 0);
   if (!name) return;
   await supabase.from('sub_projects').insert({ name, slug: slugify(name), display_order });
+  updateTag('taxonomy:sub-projects');
   revalidatePath('/admin/lookups');
 }
 
@@ -33,6 +40,7 @@ export async function deleteSubProject(formData: FormData) {
   const supabase = await requireAdmin();
   const id = String(formData.get('id') ?? '');
   await supabase.from('sub_projects').delete().eq('id', id);
+  updateTag('taxonomy:sub-projects');
   revalidatePath('/admin/lookups');
 }
 
@@ -43,12 +51,14 @@ export async function createCategory(formData: FormData) {
   const name = String(formData.get('name') ?? '').trim();
   if (!sub_project_id || !name) return;
   await supabase.from('categories').insert({ sub_project_id, name });
+  updateTag('taxonomy:categories');
   revalidatePath('/admin/lookups');
 }
 
 export async function deleteCategory(formData: FormData) {
   const supabase = await requireAdmin();
   await supabase.from('categories').delete().eq('id', String(formData.get('id') ?? ''));
+  updateTag('taxonomy:categories');
   revalidatePath('/admin/lookups');
 }
 
@@ -59,28 +69,40 @@ export async function createSubCategory(formData: FormData) {
   const name = String(formData.get('name') ?? '').trim();
   if (!category_id || !name) return;
   await supabase.from('sub_categories').insert({ category_id, name });
+  updateTag('taxonomy:categories');
   revalidatePath('/admin/lookups');
 }
 
 export async function deleteSubCategory(formData: FormData) {
   const supabase = await requireAdmin();
   await supabase.from('sub_categories').delete().eq('id', String(formData.get('id') ?? ''));
+  updateTag('taxonomy:categories');
   revalidatePath('/admin/lookups');
 }
 
 // ---- Locations ----
 export async function createLocation(formData: FormData) {
   const supabase = await requireAdmin();
-  const name = String(formData.get('name') ?? '').trim();
+  const rawName = String(formData.get('name') ?? '').trim();
   const type = String(formData.get('type') ?? 'other');
   const region = String(formData.get('region') ?? '').trim() || null;
-  if (!name) return;
+  if (!rawName) return;
+
+  const name = canonicalLocationName(rawName);
+  const { data: allLocations } = await supabase.from('locations').select('id, name');
+  if (findMatchingLocation(allLocations ?? [], rawName)) {
+    revalidatePath('/admin/lookups');
+    return;
+  }
+
   await supabase.from('locations').insert({ name, type, region });
+  updateTag('taxonomy:locations');
   revalidatePath('/admin/lookups');
 }
 
 export async function deleteLocation(formData: FormData) {
   const supabase = await requireAdmin();
   await supabase.from('locations').delete().eq('id', String(formData.get('id') ?? ''));
+  updateTag('taxonomy:locations');
   revalidatePath('/admin/lookups');
 }

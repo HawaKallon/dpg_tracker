@@ -4,8 +4,8 @@ import { updateActivity } from '../actions';
 import { createClient } from '@/lib/supabase/server';
 import {
   getCategories,
+  getDemographicsTaxonomy,
   getLocations,
-  getSubCategories,
   getSubProjects,
 } from '@/lib/supabase/queries';
 import type { Activity } from '@/types/database';
@@ -18,12 +18,14 @@ export default async function EditActivityPage({ params }: { params: Promise<{ i
 
   const a = activity as Activity;
 
-  const [subs, cats, subCats, locs] = await Promise.all([
+  const [subs, cats, locs, taxonomy] = await Promise.all([
     getSubProjects(),
     getCategories(),
-    getSubCategories(),
     getLocations(),
+    getDemographicsTaxonomy(),
   ]);
+  const ageBandOptions = taxonomy.filter((t) => t.kind === 'age_band').map((t) => t.value);
+  const roleOptions = taxonomy.filter((t) => t.kind === 'role').map((t) => t.value);
 
   const updateWithId = updateActivity.bind(null, id);
 
@@ -43,8 +45,9 @@ export default async function EditActivityPage({ params }: { params: Promise<{ i
           defaults={a}
           subProjects={subs}
           categories={cats}
-          subCategories={subCats}
           locations={locs}
+          ageBandOptions={ageBandOptions}
+          roleOptions={roleOptions}
           submitLabel="Update activity"
         />
       </div>

@@ -77,3 +77,27 @@ Sub-project → category → sub-category is a strict hierarchy (FKs with `on de
 ### UI
 
 Tailwind CSS v4 (PostCSS plugin), shadcn-style primitives in `src/components/ui/`, recharts for charts (`src/components/charts/`), lucide-react for icons, `react-hook-form` + `zod` for forms. There is no design-system package — components are local. Use `cn()` from `src/lib/utils/cn.ts` for class merging.
+
+### Caching (Cache Components)
+
+`next.config.ts` enables `cacheComponents: true`. The data-access layer in `src/lib/supabase/queries.ts` uses `'use cache'` + `cacheTag()` + `cacheLife('hours')` on every public read. Cached queries call `createPublicClient()` (anon key, no cookies) because `'use cache'` cannot touch `cookies()` / `headers()` / `searchParams`. Admin Server Actions invalidate via `revalidateTag(...)` — see the tag schema comment at the top of `queries.ts`. Page-level `revalidate = 60` exports have been removed; freshness comes from tag invalidation.
+
+### Observability
+
+Vercel Observability (project dashboard → Observability) is the default for logs / latency / errors — no code changes needed. To add structured error tracking, run `npx @sentry/wizard@latest -i nextjs` interactively; the wizard writes `sentry.{client,server,edge}.config.ts` and wraps `next.config.ts` with `withSentryConfig`. Required env vars: `NEXT_PUBLIC_SENTRY_DSN` (runtime), and `SENTRY_ORG` / `SENTRY_PROJECT` / `SENTRY_AUTH_TOKEN` (build time only).
+
+### Rate limiting
+
+Admin Server Actions call `rateLimit(userId, bucket, { max })` from `src/lib/security/rate-limit.ts` immediately after `requireAuth()`. Backed by `public.check_rate_limit()` (security-definer RPC in `0012_activity_demographics.sql`). Buckets in use: `activity:write` (20/min), `location:write` (20/min), `sub-project:write` (20/min), `lookup:write` (30–40/min), `admin:invite` (5/min).
+
+### Admin invites
+
+`src/app/admin/users/` lets an existing admin invite teammates by email. `inviteAdmin` (in `users/actions.ts`) re-checks the caller is an admin, then calls `createServiceClient().auth.admin.inviteUserByEmail(...)` — so `SUPABASE_SERVICE_ROLE_KEY` must be set in the runtime env or the action throws. The `handle_new_user` trigger creates the `profiles` row with `role='admin'`. `updateUserRole`/`removeAdmin` toggle the role (service-role write, since `profiles self update` RLS only allows self-edits); the last remaining admin can't be demoted.
+
+**Email delivery requires SMTP.** `inviteUserByEmail` only sends the magic link if the Supabase project has Auth → Email configured (Supabase Studio → Authentication → Email Templates / SMTP). Without it, the auth user is created but no email goes out.
+
+### Location de-duplication
+
+`src/lib/utils/canonical-location.ts` (`LOCATION_ANCHORS`, `canonicalLocationName`, `findMatchingLocation`) collapses venue aliases (e.g. FBC → Fourah Bay College, Limkokwing/LUCT → Limkokwing University of Creative Technology). `createLocation` and `createLocationInline` call it before insert and reuse an existing matching row. One-time DB merge: `0015_dedup_locations_full_names.sql` (idempotent). Keep SQL anchors and TS `LOCATION_ANCHORS` in sync when adding a venue.
+
+**Roles:** `profiles.role` is `super_admin` | `admin` | `viewer`. `is_admin()` (RLS) is true for `admin` and `super_admin`. Only `super_admin` sees `/admin/users` and can invite teammates (`inviteUserByEmail` with `profile_role: admin` in metadata). Promote your account: `npx tsx scripts/promote-super-admin.ts <email>` after migration `0016_super_admin_role.sql`.

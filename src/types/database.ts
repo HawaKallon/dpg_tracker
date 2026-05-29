@@ -1,9 +1,23 @@
+/**
+ * Tiptap document JSON. Kept structural so this module doesn't depend on @tiptap/core.
+ * PR B (editor stack) aliases this to JSONContent from @tiptap/core.
+ */
+export type RichTextDoc = {
+  type: string;
+  content?: unknown[];
+  [key: string]: unknown;
+};
+
 export type SubProject = {
   id: string;
   name: string;
   slug: string;
   display_order: number;
   is_active: boolean;
+  description: RichTextDoc | null;
+  hero_image_url: string | null;
+  funder_name: string | null;
+  funder_logo_url: string | null;
 };
 
 export type Category = {
@@ -23,6 +37,14 @@ export type Location = {
   name: string;
   type: 'university' | 'hub' | 'online' | 'other';
   region: string | null;
+  slug: string;
+  description: RichTextDoc | null;
+  logo_url: string | null;
+  website_url: string | null;
+  lat: number | null;
+  lng: number | null;
+  partner_type: string | null;
+  first_active_date: string | null;
 };
 
 export type Activity = {
@@ -41,6 +63,12 @@ export type Activity = {
   notes: string | null;
   discourse_url: string | null;
   data_source: string | null;
+  outcomes: RichTextDoc | null;
+  highlights: string | null;
+  media_urls: string[];
+  partner_orgs: string[];
+  age_bands: string[];
+  roles: string[];
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -50,14 +78,14 @@ export type ActivityWithRelations = Activity & {
   sub_project: Pick<SubProject, 'id' | 'name' | 'slug'> | null;
   category: Pick<Category, 'id' | 'name'> | null;
   sub_category: Pick<SubCategory, 'id' | 'name'> | null;
-  location: Pick<Location, 'id' | 'name' | 'type'> | null;
+  location: Pick<Location, 'id' | 'name' | 'type' | 'slug'> | null;
 };
 
 export type Profile = {
   id: string;
   email: string;
   full_name: string | null;
-  role: 'admin' | 'viewer';
+  role: 'super_admin' | 'admin' | 'viewer';
 };
 
 export type AuditLog = {
@@ -79,3 +107,20 @@ export type DashboardSummary = {
   activity_count: number;
   location_count: number;
 };
+
+export type DashboardSummaryCompare = DashboardSummary & {
+  prior_participants: number;
+  prior_male: number;
+  prior_female: number;
+  prior_reach: number;
+  prior_activity_count: number;
+  prior_location_count: number;
+};
+
+export type DemographicsTaxonomyItem = {
+  id: string;
+  kind: 'age_band' | 'role';
+  value: string;
+  display_order: number;
+};
+

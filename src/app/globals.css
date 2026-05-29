@@ -1,25 +1,98 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
 
-/* UNICEF palette: Cyan blue #1CABE2 (primary), white, deep navy #002759 for emphasis. */
+/* ------------------------------------------------------------------
+ * Default tokens — used by /admin, /login, and any non-public route.
+ * Kept neutral on purpose so the admin UI stays functional and clean.
+ * ----------------------------------------------------------------- */
 :root {
   --background: #ffffff;
-  --foreground: #00264d;
-  --muted: #f1f7fb;
-  --muted-foreground: #4b6982;
-  --border: #d8e6f1;
+  --paper: #ffffff;
+  --foreground: #18181b;
+  --muted: #f5f5f5;
+  --muted-foreground: #71717a;
+  --border: #e5e5e5;
   --card: #ffffff;
+  --sidebar: #fafafa;
+  --sidebar-foreground: #18181b;
+  --sidebar-accent: #f1f1f2;
   --primary: #1CABE2;
   --primary-foreground: #ffffff;
-  --primary-deep: #0073b8;
-  --accent: #002759;
+  --primary-deep: #0058AB;
+  --accent: #0058AB;
   --accent-foreground: #ffffff;
+  --accent-deep: #003F7D;
+  --ink: #18181b;
+  --signal: #1CABE2;
   --destructive: #c2410c;
   --success: #047857;
   --pink: #ec4899;
+  --ring: #d4d4d8;
+  --radius: 0.625rem;
+
+  /* Shadow ladder — available globally (no SiteShell wrapper required). */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-card:
+    0 1px 0 rgba(255, 255, 255, 0.7) inset,
+    0 1px 2px rgba(0, 0, 0, 0.04),
+    0 12px 24px -16px rgba(0, 0, 0, 0.12);
+  --shadow-lift:
+    0 1px 0 rgba(255, 255, 255, 0.7) inset,
+    0 4px 8px -2px rgba(0, 0, 0, 0.06),
+    0 24px 40px -20px rgba(0, 0, 0, 0.15);
+  --shadow-anchor:
+    0 1px 0 rgba(255, 255, 255, 0.06) inset,
+    0 8px 24px -8px rgba(0, 88, 171, 0.35);
+  --shadow-terracotta:
+    0 1px 0 rgba(255, 255, 255, 0.7) inset,
+    0 18px 40px -24px rgba(28, 171, 226, 0.45);
+}
+
+/* ------------------------------------------------------------------
+ * Public-shell tokens — applied to <SiteShell data-shell="public">.
+ * Editorial cream + ink with one warm terracotta accent.
+ * ----------------------------------------------------------------- */
+[data-shell="public"] {
+  --background: #F4F8FB;   /* soft blue tint outer gutter */
+  --paper:      #FFFFFF;   /* container surface */
+  --card:       #FFFFFF;   /* lifted card surface */
+  --foreground: #0F1A2B;   /* slate ink for body */
+  --muted:      #E6F4FB;   /* pale blue */
+  --muted-foreground: #5A6A82;
+  --border:     #D6E1EC;
+  --ink:        #0F1A2B;   /* anchor ink */
+  --primary:    #1CABE2;   /* UNICEF Blue */
+  --primary-foreground: #FFFFFF;
+  --primary-deep: #0058AB;  /* UNICEF Dark Blue */
+  --accent:     #0058AB;   /* dark blue replaces terracotta */
+  --accent-foreground: #FFFFFF;
+  --accent-deep: #003F7D;
+  --signal:     #1CABE2;
+  --pink:       #FFC20E;   /* female chart bar → UNICEF Yellow (token kept for compatibility) */
+  --destructive:#E2231A;
+  --success:    #80BD41;
+
+  /* Cool-toned shadow ladder — tinted with dark blue, not warm brown. */
+  --shadow-sm: 0 1px 2px rgba(15, 26, 43, 0.05);
+  --shadow-card:
+    0 1px 0 rgba(255, 255, 255, 0.7) inset,
+    0 1px 2px rgba(15, 26, 43, 0.04),
+    0 12px 24px -16px rgba(15, 26, 43, 0.18);
+  --shadow-lift:
+    0 1px 0 rgba(255, 255, 255, 0.7) inset,
+    0 4px 8px -2px rgba(15, 26, 43, 0.06),
+    0 24px 40px -20px rgba(15, 26, 43, 0.22);
+  --shadow-anchor:
+    0 1px 0 rgba(255, 255, 255, 0.06) inset,
+    0 8px 24px -8px rgba(0, 88, 171, 0.45);
+  --shadow-terracotta:
+    0 1px 0 rgba(255, 255, 255, 0.7) inset,
+    0 18px 40px -24px rgba(28, 171, 226, 0.55);
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-paper: var(--paper);
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
@@ -30,14 +103,106 @@
   --color-primary-deep: var(--primary-deep);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
+  --color-accent-deep: var(--accent-deep);
+  --color-ink: var(--ink);
+  --color-signal: var(--signal);
   --color-destructive: var(--destructive);
   --color-success: var(--success);
   --color-pink: var(--pink);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-ring: var(--ring);
   --font-sans: var(--font-geist-sans);
+  --font-serif: var(--font-newsreader);
   --font-mono: var(--font-geist-mono);
+  --shadow-sm: var(--shadow-sm);
+  --shadow-card: var(--shadow-card);
+  --shadow-lift: var(--shadow-lift);
+  --shadow-anchor: var(--shadow-anchor);
+  --shadow-terracotta: var(--shadow-terracotta);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
+}
+
+[data-shell="public"] {
+  font-family: var(--font-sans);
+}
+
+/* Editorial display headline — used for "DPG by the Numbers" and other page h1s. */
+.text-display {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  letter-spacing: -0.025em;
+  line-height: 0.95;
+}
+
+/* Small caps eyebrow — used by SectionEyebrow + meta strips. */
+.text-eyebrow {
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+/* Selection — matches the warm palette. */
+[data-shell="public"] ::selection {
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+
+/* ------------------------------------------------------------------
+ * Print — used by /report/[year].
+ * Flip cream back to ink-on-white so the PDF prints cleanly.
+ * ----------------------------------------------------------------- */
+@media print {
+  @page {
+    size: A4;
+    margin: 16mm;
+  }
+
+  body,
+  [data-shell="public"] {
+    --background: #ffffff;
+    --paper: #ffffff;
+    --card: #ffffff;
+    --foreground: #000000;
+    --ink: #000000;
+    --muted: #f4f4f5;
+    --muted-foreground: #404040;
+    --border: #cbd5e1;
+    --accent: #000000;
+    --accent-foreground: #ffffff;
+    --primary: #000000;
+    --primary-foreground: #ffffff;
+  }
+
+  [data-shell="public"]::before {
+    display: none;
+  }
+
+  .no-print,
+  [data-print-hide] {
+    display: none !important;
+  }
+
+  table,
+  th,
+  td {
+    border-color: #cbd5e1 !important;
+  }
+
+  h1,
+  h2,
+  h3 {
+    break-after: avoid;
+  }
+  article,
+  .print-keep {
+    break-inside: avoid;
+  }
 }

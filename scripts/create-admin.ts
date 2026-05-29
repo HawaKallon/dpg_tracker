@@ -34,7 +34,12 @@ async function main() {
     process.exit(1);
   }
 
-  console.log('Created user:', data.user?.id, data.user?.email);
+  const userId = data.user?.id;
+  if (userId) {
+    await supabase.from('profiles').update({ role: 'super_admin' }).eq('id', userId);
+  }
+
+  console.log('Created super admin:', data.user?.id, data.user?.email);
 }
 
 main().catch((e) => {
