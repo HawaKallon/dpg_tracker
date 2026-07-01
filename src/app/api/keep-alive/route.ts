@@ -1,7 +1,6 @@
 import { createServiceClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 
-export const runtime = 'nodejs';
 export const maxDuration = 60;
 
 export async function GET() {
