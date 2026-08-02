@@ -20,8 +20,12 @@ export async function rateLimit(
     p_max: opts?.max ?? 30,
   });
   if (error) {
-    // Fail open on RPC errors — don't block writes if the limiter itself is unavailable.
-    console.warn(`[rate-limit] check failed for ${bucket}:`, error.message);
+    // Fail open on RPC errors — don't block writes if the limiter itself is
+    // unavailable. Logged at error level because a missing check_rate_limit()
+    // means rate limiting is silently off, which went unnoticed for months.
+    console.error(
+      `[rate-limit] DISABLED for "${bucket}" — check_rate_limit RPC failed: ${error.message}`
+    );
     return;
   }
   if (data === false) throw new RateLimitError(bucket);

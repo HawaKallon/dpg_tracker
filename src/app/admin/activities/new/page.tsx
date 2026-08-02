@@ -1,3 +1,4 @@
+import { connection } from 'next/server';
 import { ActivityForm } from '../_components/activity-form';
 import { createActivity } from '../actions';
 import {
@@ -8,6 +9,16 @@ import {
 } from '@/lib/supabase/queries';
 
 export default async function NewActivityPage() {
+  // Generated here rather than in the client component: it is both the row's
+  // primary key and the storage folder photos upload into, so it has to be
+  // settled before hydration (a client-side crypto.randomUUID() in a useState
+  // initializer produced a different value on each side and a hydration warning).
+  // `connection()` opts this page out of prerendering — Cache Components refuses
+  // to bake a random value into a static shell, and rightly so: every visitor
+  // would share one activity id.
+  await connection();
+  const activityId = crypto.randomUUID();
+
   const [subs, cats, locs, taxonomy] = await Promise.all([
     getSubProjects(),
     getCategories(),
@@ -32,6 +43,7 @@ export default async function NewActivityPage() {
       <div className="rounded-xl border border-border bg-card p-6 md:p-8">
         <ActivityForm
           action={createActivity}
+          activityId={activityId}
           subProjects={subs}
           categories={cats}
           locations={locs}
