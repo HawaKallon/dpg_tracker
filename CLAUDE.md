@@ -25,6 +25,13 @@ No test runner is configured.
 
 Migrations live under `supabase/migrations/` and are applied manually (Supabase SQL editor or `supabase db push`). Apply them in numeric order — `0003_event_year.sql` adds the `event_year` column and `0004_year_views.sql` replaces the dashboard views with the year-parameterized RPC functions the queries layer expects.
 
+**Nothing tracks which migrations have run, and drift has bitten before.** On 2026-08-02 the live project was found sitting at `0007` while `0016` had been applied out of order: `activities.outcomes/.highlights/.media_urls/.partner_orgs/.age_bands/.roles`, `demographics_taxonomy` and `check_rate_limit()` were all absent, so the admin form dropped those fields on every save. `0018_catchup_0008_to_0017.sql` is the idempotent catch-up. When a save fails on a missing column the action now says so explicitly (`describeDbError`) — never re-introduce a retry loop that strips the column and saves anyway. To check the live schema quickly:
+
+```bash
+curl -s "$NEXT_PUBLIC_SUPABASE_URL/rest/v1/activities?select=outcomes,media_urls,age_bands&limit=1" \
+  -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY"
+```
+
 ```bash
 # First admin user (sign-up is closed by default)
 npx tsx scripts/create-admin.ts <email> <password> "Full Name"
@@ -76,7 +83,11 @@ Sub-project → category → sub-category is a strict hierarchy (FKs with `on de
 
 ### UI
 
-Tailwind CSS v4 (PostCSS plugin), shadcn-style primitives in `src/components/ui/`, recharts for charts (`src/components/charts/`), lucide-react for icons, `react-hook-form` + `zod` for forms. There is no design-system package — components are local. Use `cn()` from `src/lib/utils/cn.ts` for class merging.
+Tailwind CSS v4 (PostCSS plugin), shadcn-style primitives in `src/components/ui/`, recharts for charts (`src/components/charts/`), lucide-react for icons. There is no design-system package — components are local. Use `cn()` from `src/lib/utils/cn.ts` for class merging.
+
+Admin forms are plain `<form action={…}>` posting `FormData` to a Server Action — **no `react-hook-form`, no `zod`** despite both being in `package.json`. Validation is HTML attributes plus hand-rolled coercion in the action (`nullable`, `countField`, `stringArray` in `activities/actions.ts`). The activity form uses `useActionState`; the action returns `{ error }` rather than throwing so the form can show it inline. Keep every text field **controlled** — React 19 resets uncontrolled inputs once a form action settles, including on failure, which silently discards long Notes/Outcomes text.
+
+**Photos upload from the browser, not through the Server Action.** `src/lib/supabase/storage-client.ts` writes straight to the `dpg-media` bucket and the form submits public URLs (`media_urls`); the action validates them against `isMediaUrl()`. Files must not go back into the action body — Next caps it at 1 MB by default and Vercel at 4.5 MB, which used to fail the entire "create activity" request as soon as a real photo was attached. `src/lib/utils/image-file.ts` holds the MIME/size rules shared by both sides.
 
 ### Caching (Cache Components)
 

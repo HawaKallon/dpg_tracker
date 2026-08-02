@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
-import { Plus, X } from 'lucide-react';
+import { useActionState, useMemo, useState, useTransition } from 'react';
+import { AlertCircle, Plus, X } from 'lucide-react';
 import type { JSONContent } from '@tiptap/core';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
@@ -12,7 +12,7 @@ import { RichTextEditor } from '@/components/editor/rich-text-editor';
 import { ChipInput } from '@/components/chip-input';
 import { TaxonomyChips } from '@/components/taxonomy-chips';
 import { MediaPicker } from '@/components/media-picker';
-import { createLocationInline } from '../actions';
+import { createLocationInline, type ActivityFormState } from '../actions';
 import type {
   Category,
   Location,
@@ -39,12 +39,14 @@ export type ActivityFormDefaults = {
   partner_orgs?: string[] | null;
   age_bands?: string[] | null;
   roles?: string[] | null;
+  updated_at?: string | null;
 };
 
 type LocationLite = { id: string; name: string; type: string };
 
 export function ActivityForm({
   action,
+  activityId,
   defaults,
   subProjects,
   categories,
@@ -53,7 +55,16 @@ export function ActivityForm({
   roleOptions,
   submitLabel = 'Save activity',
 }: {
-  action: (formData: FormData) => void | Promise<void>;
+  action: (
+    prev: ActivityFormState,
+    formData: FormData
+  ) => Promise<ActivityFormState>;
+  /**
+   * Generated on the server so it is stable across hydration — it doubles as the
+   * row's primary key and as the storage folder photos upload into, both of
+   * which have to be settled before the first photo is picked.
+   */
+  activityId: string;
   defaults?: ActivityFormDefaults;
   subProjects: SubProject[];
   categories: Category[];
@@ -62,14 +73,28 @@ export function ActivityForm({
   roleOptions: string[];
   submitLabel?: string;
 }) {
-  const [activityId] = useState<string>(() => defaults?.id ?? crypto.randomUUID());
+  const [state, formAction, isPending] = useActionState<ActivityFormState, FormData>(
+    action,
+    undefined
+  );
+
   const [subProjectId, setSubProjectId] = useState(defaults?.sub_project_id ?? '');
   const [categoryId, setCategoryId] = useState(defaults?.category_id ?? '');
   const [locationId, setLocationId] = useState(defaults?.location_id ?? '');
   const [male, setMale] = useState<string>(defaults?.male_count?.toString() ?? '');
   const [female, setFemale] = useState<string>(defaults?.female_count?.toString() ?? '');
   const [total, setTotal] = useState<string>(defaults?.total_count?.toString() ?? '');
-  const [totalEdited, setTotalEdited] = useState(false);
+
+  // Every text field is controlled on purpose. React 19 resets uncontrolled
+  // inputs once a form action settles — including when it fails — so leaving
+  // these on defaultValue would wipe a long Notes/Outcomes write-up the moment
+  // a save errored, which is the failure this form is being fixed for.
+  const [activityDate, setActivityDate] = useState(defaults?.activity_date ?? '');
+  const [eventYear, setEventYear] = useState(defaults?.event_year?.toString() ?? '');
+  const [monthLabel, setMonthLabel] = useState(defaults?.month_label ?? '');
+  const [discourseUrl, setDiscourseUrl] = useState(defaults?.discourse_url ?? '');
+  const [notes, setNotes] = useState(defaults?.notes ?? '');
+  const [highlights, setHighlights] = useState(defaults?.highlights ?? '');
 
   const [outcomes, setOutcomes] = useState<JSONContent | null>(
     (defaults?.outcomes ?? null) as JSONContent | null
@@ -77,22 +102,8 @@ export function ActivityForm({
   const [partnerOrgs, setPartnerOrgs] = useState<string[]>(defaults?.partner_orgs ?? []);
   const [ageBands, setAgeBands] = useState<string[]>(defaults?.age_bands ?? []);
   const [roles, setRoles] = useState<string[]>(defaults?.roles ?? []);
-  const [keepUrls, setKeepUrls] = useState<string[]>(defaults?.media_urls ?? []);
-  const [newFiles, setNewFiles] = useState<File[]>([]);
-  const formRef = useRef<HTMLFormElement>(null);
-
-  // Inject state-tracked files into FormData on submit so the server action receives them.
-  useEffect(() => {
-    const form = formRef.current;
-    if (!form) return;
-    const handler = (e: FormDataEvent) => {
-      for (const f of newFiles) {
-        e.formData.append('media_files', f, f.name);
-      }
-    };
-    form.addEventListener('formdata', handler);
-    return () => form.removeEventListener('formdata', handler);
-  }, [newFiles]);
+  const [mediaUrls, setMediaUrls] = useState<string[]>(defaults?.media_urls ?? []);
+  const [uploading, setUploading] = useState(false);
 
   const [locList, setLocList] = useState<LocationLite[]>(
     locations.map((l) => ({ id: l.id, name: l.name, type: l.type }))
@@ -112,15 +123,24 @@ export function ActivityForm({
     [categories, subProjectId]
   );
 
-  const autoTotal = (() => {
-    if (totalEdited) return total;
-    const m = Number(male);
-    const f = Number(female);
-    if (Number.isFinite(m) && Number.isFinite(f) && (male !== '' || female !== '')) {
-      return String((Number.isFinite(m) ? m : 0) + (Number.isFinite(f) ? f : 0));
-    }
-    return total;
-  })();
+  // The gender split is often incomplete, so M + F legitimately disagrees with
+  // the headcount. Suggest the sum, never apply it: an earlier version derived
+  // the Total on every render, which silently rewrote hand-entered figures the
+  // next time the activity was opened.
+  const genderSum =
+    male.trim() !== '' || female.trim() !== ''
+      ? (Number(male) || 0) + (Number(female) || 0)
+      : null;
+  const totalNum = total.trim() === '' ? null : Number(total);
+  const sumDiffers = genderSum !== null && totalNum !== null && totalNum !== genderSum;
+  const totalBelowSum = genderSum !== null && totalNum !== null && totalNum < genderSum;
+
+  /** Fill an empty Total as a convenience; never overwrite a value that's there. */
+  function fillTotalIfEmpty(nextMale: string, nextFemale: string) {
+    if (total.trim() !== '') return;
+    if (nextMale.trim() === '' && nextFemale.trim() === '') return;
+    setTotal(String((Number(nextMale) || 0) + (Number(nextFemale) || 0)));
+  }
 
   function handleAddLocation() {
     setLocError(null);
@@ -133,7 +153,9 @@ export function ActivityForm({
       try {
         const created = await createLocationInline({ name, type: newLocType });
         setLocList((prev) =>
-          prev.some((p) => p.id === created.id) ? prev : [...prev, created].sort((a, b) => a.name.localeCompare(b.name))
+          prev.some((p) => p.id === created.id)
+            ? prev
+            : [...prev, created].sort((a, b) => a.name.localeCompare(b.name))
         );
         setLocationId(created.id);
         setNewLocName('');
@@ -145,8 +167,11 @@ export function ActivityForm({
   }
 
   return (
-    <form ref={formRef} action={action} className="space-y-8 w-full">
+    <form action={formAction} className="space-y-8 w-full">
       <input type="hidden" name="activity_id" value={activityId} />
+      {defaults?.updated_at && (
+        <input type="hidden" name="row_version" value={defaults.updated_at} />
+      )}
       <input
         type="hidden"
         name="outcomes"
@@ -161,6 +186,20 @@ export function ActivityForm({
       {roles.map((p, i) => (
         <input key={`r-${p}-${i}`} type="hidden" name="roles" value={p} />
       ))}
+
+      {state?.error && (
+        <div
+          role="alert"
+          className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+        >
+          <AlertCircle className="size-4 mt-0.5 shrink-0" />
+          <div>
+            <p className="font-medium">This activity was not saved.</p>
+            <p className="mt-0.5">{state.error}</p>
+          </div>
+        </div>
+      )}
+
       <section>
         <header className="mb-4">
           <h2 className="text-sm font-semibold text-accent">Classification</h2>
@@ -290,7 +329,8 @@ export function ActivityForm({
         <header className="mb-4">
           <h2 className="text-sm font-semibold text-accent">When</h2>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Year is taken from the date. If no date is given, the current year is used. Month label is for legacy/fuzzy entries.
+            Year drives every dashboard filter. It follows the date unless you set it
+            explicitly. Month label is for legacy/fuzzy entries.
           </p>
         </header>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -300,8 +340,27 @@ export function ActivityForm({
             id="activity_date"
             name="activity_date"
             type="date"
-            defaultValue={defaults?.activity_date ?? ''}
+            value={activityDate}
+            onChange={(e) => setActivityDate(e.target.value)}
           />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="event_year">Year</Label>
+          <Input
+            id="event_year"
+            name="event_year"
+            type="number"
+            min={2000}
+            max={2100}
+            placeholder="From the date"
+            value={eventYear}
+            onChange={(e) => setEventYear(e.target.value)}
+          />
+          <p className="text-xs text-muted-foreground">
+            Leave blank to take the year from the date. With neither, the current year
+            is used.
+          </p>
         </div>
 
         <div className="space-y-1.5 md:col-span-2">
@@ -310,7 +369,8 @@ export function ActivityForm({
             id="month_label"
             name="month_label"
             placeholder='e.g. "July" or "Start - July 31st"'
-            defaultValue={defaults?.month_label ?? ''}
+            value={monthLabel}
+            onChange={(e) => setMonthLabel(e.target.value)}
           />
         </div>
         </div>
@@ -320,7 +380,8 @@ export function ActivityForm({
         <header className="mb-4">
           <h2 className="text-sm font-semibold text-accent">Participants</h2>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Total auto-calculates from M + F until you edit it.
+            Total is the headcount you report. It is only filled in for you when it is
+            blank — it is never recalculated behind your back.
           </p>
         </header>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
@@ -331,8 +392,12 @@ export function ActivityForm({
               name="male_count"
               type="number"
               min={0}
+              step={1}
               value={male}
-              onChange={(e) => setMale(e.target.value)}
+              onChange={(e) => {
+                setMale(e.target.value);
+                fillTotalIfEmpty(e.target.value, female);
+              }}
             />
           </div>
           <div className="space-y-1.5">
@@ -342,8 +407,12 @@ export function ActivityForm({
               name="female_count"
               type="number"
               min={0}
+              step={1}
               value={female}
-              onChange={(e) => setFemale(e.target.value)}
+              onChange={(e) => {
+                setFemale(e.target.value);
+                fillTotalIfEmpty(male, e.target.value);
+              }}
             />
           </div>
           <div className="space-y-1.5">
@@ -353,12 +422,30 @@ export function ActivityForm({
               name="total_count"
               type="number"
               min={0}
-              value={autoTotal}
-              onChange={(e) => {
-                setTotalEdited(true);
-                setTotal(e.target.value);
-              }}
+              step={1}
+              value={total}
+              onChange={(e) => setTotal(e.target.value)}
             />
+            {sumDiffers && (
+              <p
+                className={
+                  totalBelowSum
+                    ? 'text-xs text-destructive'
+                    : 'text-xs text-muted-foreground'
+                }
+              >
+                {totalBelowSum
+                  ? `Total is below Male + Female (${genderSum}).`
+                  : `Male + Female = ${genderSum}.`}{' '}
+                <button
+                  type="button"
+                  onClick={() => setTotal(String(genderSum))}
+                  className="text-primary underline underline-offset-2"
+                >
+                  Use {genderSum}
+                </button>
+              </p>
+            )}
           </div>
         </div>
       </section>
@@ -378,7 +465,8 @@ export function ActivityForm({
               name="discourse_url"
               type="url"
               placeholder="https://dpg.discourse.group/t/..."
-              defaultValue={defaults?.discourse_url ?? ''}
+              value={discourseUrl}
+              onChange={(e) => setDiscourseUrl(e.target.value)}
             />
           </div>
           <div className="space-y-1.5 md:row-span-2">
@@ -387,7 +475,8 @@ export function ActivityForm({
               id="notes"
               name="notes"
               rows={6}
-              defaultValue={defaults?.notes ?? ''}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
               className="h-full"
             />
           </div>
@@ -403,7 +492,8 @@ export function ActivityForm({
         </header>
         <div className="space-y-5">
           <div className="space-y-1.5">
-            <Label htmlFor="outcomes">Outcomes</Label>
+            {/* Not htmlFor — the editable surface is Tiptap's contenteditable, not an input. */}
+            <Label>Outcomes</Label>
             <RichTextEditor
               value={outcomes}
               onChange={setOutcomes}
@@ -417,7 +507,8 @@ export function ActivityForm({
               name="highlights"
               rows={2}
               maxLength={280}
-              defaultValue={defaults?.highlights ?? ''}
+              value={highlights}
+              onChange={(e) => setHighlights(e.target.value)}
               placeholder="One memorable line — a participant quote, an outcome stat, anything funders should remember."
             />
           </div>
@@ -472,15 +563,22 @@ export function ActivityForm({
           </p>
         </header>
         <MediaPicker
-          keepUrls={keepUrls}
-          onKeepUrlsChange={setKeepUrls}
-          newFiles={newFiles}
-          onNewFilesChange={setNewFiles}
+          activityId={activityId}
+          urls={mediaUrls}
+          onUrlsChange={setMediaUrls}
+          onUploadingChange={setUploading}
         />
       </section>
 
-      <div className="flex gap-2 justify-end pt-2 border-t border-border">
-        <Button type="submit" size="lg">{submitLabel}</Button>
+      <div className="flex items-center gap-3 justify-end pt-2 border-t border-border">
+        {uploading && (
+          <span className="text-xs text-muted-foreground">
+            Waiting for photo uploads…
+          </span>
+        )}
+        <Button type="submit" size="lg" disabled={isPending || uploading}>
+          {isPending ? 'Saving…' : submitLabel}
+        </Button>
       </div>
     </form>
   );

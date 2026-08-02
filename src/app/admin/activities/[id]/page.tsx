@@ -42,6 +42,7 @@ export default async function EditActivityPage({ params }: { params: Promise<{ i
       <div className="rounded-xl border border-border bg-card p-6 md:p-8">
         <ActivityForm
           action={updateWithId}
+          activityId={a.id}
           defaults={a}
           subProjects={subs}
           categories={cats}
